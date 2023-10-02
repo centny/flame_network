@@ -8,6 +8,7 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  flame_forge2d: ^0.15.0+1
   flutter:
     sdk: flutter
 
