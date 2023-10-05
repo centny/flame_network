@@ -21,8 +21,12 @@ export 'server.pb.dart';
 
 @$pb.GrpcServiceName('Server')
 class ServerClient extends $grpc.Client {
-  static final _$monitorSync = $grpc.ClientMethod<$0.SyncArg, $0.SyncData>(
-      '/Server/MonitorSync',
+  static final _$callPing = $grpc.ClientMethod<$0.PingArg, $0.PingResult>(
+      '/Server/CallPing',
+      ($0.PingArg value) => value.writeToBuffer(),
+      ($core.List<$core.int> value) => $0.PingResult.fromBuffer(value));
+  static final _$callMonitorSync = $grpc.ClientMethod<$0.SyncArg, $0.SyncData>(
+      '/Server/CallMonitorSync',
       ($0.SyncArg value) => value.writeToBuffer(),
       ($core.List<$core.int> value) => $0.SyncData.fromBuffer(value));
 
@@ -32,8 +36,12 @@ class ServerClient extends $grpc.Client {
       : super(channel, options: options,
         interceptors: interceptors);
 
-  $grpc.ResponseStream<$0.SyncData> monitorSync($0.SyncArg request, {$grpc.CallOptions? options}) {
-    return $createStreamingCall(_$monitorSync, $async.Stream.fromIterable([request]), options: options);
+  $grpc.ResponseFuture<$0.PingResult> callPing($0.PingArg request, {$grpc.CallOptions? options}) {
+    return $createUnaryCall(_$callPing, request, options: options);
+  }
+
+  $grpc.ResponseStream<$0.SyncData> callMonitorSync($0.SyncArg request, {$grpc.CallOptions? options}) {
+    return $createStreamingCall(_$callMonitorSync, $async.Stream.fromIterable([request]), options: options);
   }
 }
 
@@ -42,18 +50,30 @@ abstract class ServerServiceBase extends $grpc.Service {
   $core.String get $name => 'Server';
 
   ServerServiceBase() {
+    $addMethod($grpc.ServiceMethod<$0.PingArg, $0.PingResult>(
+        'CallPing',
+        callPing_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.PingArg.fromBuffer(value),
+        ($0.PingResult value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.SyncArg, $0.SyncData>(
-        'MonitorSync',
-        monitorSync_Pre,
+        'CallMonitorSync',
+        callMonitorSync_Pre,
         false,
         true,
         ($core.List<$core.int> value) => $0.SyncArg.fromBuffer(value),
         ($0.SyncData value) => value.writeToBuffer()));
   }
 
-  $async.Stream<$0.SyncData> monitorSync_Pre($grpc.ServiceCall call, $async.Future<$0.SyncArg> request) async* {
-    yield* monitorSync(call, await request);
+  $async.Future<$0.PingResult> callPing_Pre($grpc.ServiceCall call, $async.Future<$0.PingArg> request) async {
+    return callPing(call, await request);
   }
 
-  $async.Stream<$0.SyncData> monitorSync($grpc.ServiceCall call, $0.SyncArg request);
+  $async.Stream<$0.SyncData> callMonitorSync_Pre($grpc.ServiceCall call, $async.Future<$0.SyncArg> request) async* {
+    yield* callMonitorSync(call, await request);
+  }
+
+  $async.Future<$0.PingResult> callPing($grpc.ServiceCall call, $0.PingArg request);
+  $async.Stream<$0.SyncData> callMonitorSync($grpc.ServiceCall call, $0.SyncArg request);
 }

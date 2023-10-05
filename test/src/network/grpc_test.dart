@@ -1,54 +1,133 @@
 import 'dart:async';
 
-import 'package:flame/components.dart';
 import 'package:flame_network/src/common/log.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flame_network/flame_network.dart';
 import 'package:grpc/grpc.dart';
 
 class TestNetworkCallback with NetworkCallback {
-  StreamController<String> connWaiter = StreamController<String>();
-  StreamController<String> dataWaiter = StreamController<String>();
+  final StreamController<String> _connWaiter = StreamController<String>();
+  final StreamController<String> _dataWaiter = StreamController<String>();
+  late StreamIterator<String> connWaiter;
+  late StreamIterator<String> dataWaiter;
 
-  @override
-  void onNetworkState(NetworkConnection conn, NetworkState state, {Object? info}) async {
-    L.i("[Test] connection to $state,server:${conn.isServer},client:${conn.isClient}");
-    if (conn.isServer && state == NetworkState.ready) {
-      connWaiter.add("$state");
+  TestNetworkCallback() {
+    connWaiter = StreamIterator(_connWaiter.stream);
+    dataWaiter = StreamIterator(_dataWaiter.stream);
+  }
+
+  Future<String> waitConn() async {
+    if (await connWaiter.moveNext()) {
+      return connWaiter.current;
+    } else {
+      return "";
+    }
+  }
+
+  Future<String> waitData() async {
+    if (await dataWaiter.moveNext()) {
+      return dataWaiter.current;
+    } else {
+      return "";
     }
   }
 
   @override
-  void onNetworkSync(NetworkConnection conn, NetworkSyncData data) {
+  void onNetworkState(NetworkConnection conn, NetworkState state, {Object? info}) {
+    L.i("[Test] connection to $state,server:${conn.isServer},client:${conn.isClient}");
+    if (conn.isServer) {
+      _connWaiter.add("$state");
+    }
+  }
+
+  @override
+  Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async {
     L.i("[Test] sync data $data");
-    dataWaiter.add(data.uuid);
+    _dataWaiter.add(data.uuid);
   }
 }
 
+class TestNetworkCall {}
+
 void main() {
-  test('NetworkSession', () async {
-    var session = NetworkSession.from({});
-    session.session = "123";
-    session.room = "123";
-    assert(session.session == "123");
-    assert(session.room == "123");
-  });
-  test('NetworkManagerGRPC', () async {
+  test('NetworkGRPC.sync', () async {
     var callback = TestNetworkCallback();
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
     await NetworkManagerGRPC.shared.start();
-    var connected = await callback.connWaiter.stream.first;
-    var client = NetworkManagerGRPC.shared.client;
+    var connected = await callback.waitConn();
     L.i("conn is $connected");
-    var connections = NetworkManagerGRPC.shared.server?.connections ?? [];
-    NetworkManagerGRPC.shared.networkSync(NetworkSyncData.create(components: [NetworkSyncComponent(type: "type", uuid: "uuid", removed: false, position: Vector2(1, 2), size: Vector2(10, 10), scale: Vector2(1, 1), angle: 0)]));
-    var received = await callback.dataWaiter.stream.first;
+    NetworkManagerGRPC.shared.networkSync(NetworkSyncData.create(components: [
+      NetworkSyncDataComponent(
+        nFactory: "type",
+        nID: "uuid",
+        nRemoved: false,
+      )
+    ]));
+    var received = await callback.waitData();
     L.i("data is $received");
     await NetworkManagerGRPC.shared.stop();
-    await Future.delayed(const Duration(microseconds: 100));
-
+  });
+  test('NetworkGRPC.ping', () async {
+    var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.isServer = true;
+    NetworkManagerGRPC.shared.isClient = true;
+    NetworkManagerGRPC.shared.callback = callback;
+    NetworkManagerGRPC.shared.keepalive = const Duration(milliseconds: 10);
+    await NetworkManagerGRPC.shared.start();
+    var ready = await callback.waitConn();
+    L.i("conn is $ready");
+    await NetworkManagerGRPC.shared.ping(const Duration(seconds: 3));
+    await Future.delayed(const Duration(milliseconds: 100));
+    await NetworkManagerGRPC.shared.ticker();
+    var closed = await callback.waitConn();
+    L.i("conn is $closed");
+    await NetworkManagerGRPC.shared.stop();
+  });
+  test('NetworkGRPC.reconnect', () async {
+    var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.isServer = true;
+    NetworkManagerGRPC.shared.isClient = true;
+    NetworkManagerGRPC.shared.callback = callback;
+    await NetworkManagerGRPC.shared.start();
+    var ready = await callback.waitConn();
+    L.i("conn is $ready");
+    await NetworkManagerGRPC.shared.client?.stopMonitorSync();
+    await NetworkManagerGRPC.shared.channel?.shutdown();
+    var reconnect = await callback.waitConn();
+    L.i("reconnect is $reconnect");
+    await Future.delayed(const Duration(milliseconds: 100));
+    await NetworkManagerGRPC.shared.ticker();
+    var closed = await callback.waitConn();
+    L.i("conn is $closed");
+    await NetworkManagerGRPC.shared.stop();
+  });
+  test('NetworkGRPC.keep', () async {
+    var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.isServer = true;
+    NetworkManagerGRPC.shared.isClient = true;
+    NetworkManagerGRPC.shared.callback = callback;
+    await NetworkManagerGRPC.shared.start();
+    var ready = await callback.waitConn();
+    L.i("conn is $ready");
+    NetworkManagerGRPC.shared.client = null;
+    NetworkManagerGRPC.shared.channel = null;
+    await NetworkManagerGRPC.shared.ticker();
+    var reconnect = await callback.waitConn();
+    L.i("reconnect is $reconnect");
+    await NetworkManagerGRPC.shared.stop();
+  });
+  test('NetworkGRPC.cover', () async {
+    var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.isServer = true;
+    NetworkManagerGRPC.shared.isClient = true;
+    NetworkManagerGRPC.shared.callback = callback;
+    await NetworkManagerGRPC.shared.start();
+    await callback.waitConn();
+    var client = NetworkManagerGRPC.shared.client;
+    var connections = NetworkManagerGRPC.shared.server?.connections ?? [];
+    await NetworkManagerGRPC.shared.stop();
     //test for cover
     for (var c in connections) {
       c.onActiveStateChanged = (v) => L.i("$v");
@@ -64,5 +143,10 @@ void main() {
       L.i("${c.onFrameReceived}");
     }
     client?.onConnectionStateChanged(ConnectionState.transientFailure);
+
+    //
+    NetworkManagerGRPC.shared.isClient = false;
+    NetworkManagerGRPC.shared.service = null;
+    await NetworkManagerGRPC.shared.ticker();
   });
 }

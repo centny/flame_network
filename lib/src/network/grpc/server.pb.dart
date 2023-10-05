@@ -11,6 +11,7 @@
 
 import 'dart:core' as $core;
 
+import 'package:fixnum/fixnum.dart' as $fixnum;
 import 'package:protobuf/protobuf.dart' as $pb;
 
 class RequestID extends $pb.GeneratedMessage {
@@ -63,52 +64,37 @@ class RequestID extends $pb.GeneratedMessage {
   void clearUuid() => clearField(1);
 }
 
-class SyncComponent extends $pb.GeneratedMessage {
-  factory SyncComponent({
-    $core.String? type,
-    $core.String? uuid,
+class SyncDataComponent extends $pb.GeneratedMessage {
+  factory SyncDataComponent({
+    $core.String? factory,
+    $core.String? id,
     $core.bool? removed,
-    $core.Iterable<$core.double>? position,
-    $core.Iterable<$core.double>? size,
-    $core.Iterable<$core.double>? scale,
-    $core.double? angle,
+    $core.String? props,
   }) {
     final $result = create();
-    if (type != null) {
-      $result.type = type;
+    if (factory != null) {
+      $result.factory = factory;
     }
-    if (uuid != null) {
-      $result.uuid = uuid;
+    if (id != null) {
+      $result.id = id;
     }
     if (removed != null) {
       $result.removed = removed;
     }
-    if (position != null) {
-      $result.position.addAll(position);
-    }
-    if (size != null) {
-      $result.size.addAll(size);
-    }
-    if (scale != null) {
-      $result.scale.addAll(scale);
-    }
-    if (angle != null) {
-      $result.angle = angle;
+    if (props != null) {
+      $result.props = props;
     }
     return $result;
   }
-  SyncComponent._() : super();
-  factory SyncComponent.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
-  factory SyncComponent.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  SyncDataComponent._() : super();
+  factory SyncDataComponent.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory SyncDataComponent.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
 
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SyncComponent', createEmptyInstance: create)
-    ..aOS(1, _omitFieldNames ? '' : 'type')
-    ..aOS(2, _omitFieldNames ? '' : 'uuid')
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SyncDataComponent', createEmptyInstance: create)
+    ..aOS(1, _omitFieldNames ? '' : 'factory')
+    ..aOS(2, _omitFieldNames ? '' : 'id')
     ..aOB(3, _omitFieldNames ? '' : 'removed')
-    ..p<$core.double>(4, _omitFieldNames ? '' : 'position', $pb.PbFieldType.KD)
-    ..p<$core.double>(5, _omitFieldNames ? '' : 'size', $pb.PbFieldType.KD)
-    ..p<$core.double>(6, _omitFieldNames ? '' : 'scale', $pb.PbFieldType.KD)
-    ..a<$core.double>(7, _omitFieldNames ? '' : 'angle', $pb.PbFieldType.OD)
+    ..aOS(4, _omitFieldNames ? '' : 'props')
     ..hasRequiredFields = false
   ;
 
@@ -116,40 +102,40 @@ class SyncComponent extends $pb.GeneratedMessage {
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
-  SyncComponent clone() => SyncComponent()..mergeFromMessage(this);
+  SyncDataComponent clone() => SyncDataComponent()..mergeFromMessage(this);
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
-  SyncComponent copyWith(void Function(SyncComponent) updates) => super.copyWith((message) => updates(message as SyncComponent)) as SyncComponent;
+  SyncDataComponent copyWith(void Function(SyncDataComponent) updates) => super.copyWith((message) => updates(message as SyncDataComponent)) as SyncDataComponent;
 
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
-  static SyncComponent create() => SyncComponent._();
-  SyncComponent createEmptyInstance() => create();
-  static $pb.PbList<SyncComponent> createRepeated() => $pb.PbList<SyncComponent>();
+  static SyncDataComponent create() => SyncDataComponent._();
+  SyncDataComponent createEmptyInstance() => create();
+  static $pb.PbList<SyncDataComponent> createRepeated() => $pb.PbList<SyncDataComponent>();
   @$core.pragma('dart2js:noInline')
-  static SyncComponent getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SyncComponent>(create);
-  static SyncComponent? _defaultInstance;
+  static SyncDataComponent getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<SyncDataComponent>(create);
+  static SyncDataComponent? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.String get type => $_getSZ(0);
+  $core.String get factory => $_getSZ(0);
   @$pb.TagNumber(1)
-  set type($core.String v) { $_setString(0, v); }
+  set factory($core.String v) { $_setString(0, v); }
   @$pb.TagNumber(1)
-  $core.bool hasType() => $_has(0);
+  $core.bool hasFactory() => $_has(0);
   @$pb.TagNumber(1)
-  void clearType() => clearField(1);
+  void clearFactory() => clearField(1);
 
   @$pb.TagNumber(2)
-  $core.String get uuid => $_getSZ(1);
+  $core.String get id => $_getSZ(1);
   @$pb.TagNumber(2)
-  set uuid($core.String v) { $_setString(1, v); }
+  set id($core.String v) { $_setString(1, v); }
   @$pb.TagNumber(2)
-  $core.bool hasUuid() => $_has(1);
+  $core.bool hasId() => $_has(1);
   @$pb.TagNumber(2)
-  void clearUuid() => clearField(2);
+  void clearId() => clearField(2);
 
   @$pb.TagNumber(3)
   $core.bool get removed => $_getBF(2);
@@ -161,22 +147,13 @@ class SyncComponent extends $pb.GeneratedMessage {
   void clearRemoved() => clearField(3);
 
   @$pb.TagNumber(4)
-  $core.List<$core.double> get position => $_getList(3);
-
-  @$pb.TagNumber(5)
-  $core.List<$core.double> get size => $_getList(4);
-
-  @$pb.TagNumber(6)
-  $core.List<$core.double> get scale => $_getList(5);
-
-  @$pb.TagNumber(7)
-  $core.double get angle => $_getN(6);
-  @$pb.TagNumber(7)
-  set angle($core.double v) { $_setDouble(6, v); }
-  @$pb.TagNumber(7)
-  $core.bool hasAngle() => $_has(6);
-  @$pb.TagNumber(7)
-  void clearAngle() => clearField(7);
+  $core.String get props => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set props($core.String v) { $_setString(3, v); }
+  @$pb.TagNumber(4)
+  $core.bool hasProps() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearProps() => clearField(4);
 }
 
 class SyncArg extends $pb.GeneratedMessage {
@@ -234,11 +211,15 @@ class SyncArg extends $pb.GeneratedMessage {
 class SyncData extends $pb.GeneratedMessage {
   factory SyncData({
     RequestID? id,
-    $core.Iterable<SyncComponent>? components,
+    $core.String? groupd,
+    $core.Iterable<SyncDataComponent>? components,
   }) {
     final $result = create();
     if (id != null) {
       $result.id = id;
+    }
+    if (groupd != null) {
+      $result.groupd = groupd;
     }
     if (components != null) {
       $result.components.addAll(components);
@@ -251,7 +232,8 @@ class SyncData extends $pb.GeneratedMessage {
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SyncData', createEmptyInstance: create)
     ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
-    ..pc<SyncComponent>(3, _omitFieldNames ? '' : 'components', $pb.PbFieldType.PM, subBuilder: SyncComponent.create)
+    ..aOS(2, _omitFieldNames ? '' : 'groupd')
+    ..pc<SyncDataComponent>(3, _omitFieldNames ? '' : 'components', $pb.PbFieldType.PM, subBuilder: SyncDataComponent.create)
     ..hasRequiredFields = false
   ;
 
@@ -287,8 +269,135 @@ class SyncData extends $pb.GeneratedMessage {
   @$pb.TagNumber(1)
   RequestID ensureId() => $_ensure(0);
 
+  @$pb.TagNumber(2)
+  $core.String get groupd => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set groupd($core.String v) { $_setString(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasGroupd() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearGroupd() => clearField(2);
+
   @$pb.TagNumber(3)
-  $core.List<SyncComponent> get components => $_getList(1);
+  $core.List<SyncDataComponent> get components => $_getList(2);
+}
+
+class PingArg extends $pb.GeneratedMessage {
+  factory PingArg({
+    RequestID? id,
+  }) {
+    final $result = create();
+    if (id != null) {
+      $result.id = id;
+    }
+    return $result;
+  }
+  PingArg._() : super();
+  factory PingArg.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory PingArg.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'PingArg', createEmptyInstance: create)
+    ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  PingArg clone() => PingArg()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  PingArg copyWith(void Function(PingArg) updates) => super.copyWith((message) => updates(message as PingArg)) as PingArg;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PingArg create() => PingArg._();
+  PingArg createEmptyInstance() => create();
+  static $pb.PbList<PingArg> createRepeated() => $pb.PbList<PingArg>();
+  @$core.pragma('dart2js:noInline')
+  static PingArg getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PingArg>(create);
+  static PingArg? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  RequestID get id => $_getN(0);
+  @$pb.TagNumber(1)
+  set id(RequestID v) { setField(1, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => clearField(1);
+  @$pb.TagNumber(1)
+  RequestID ensureId() => $_ensure(0);
+}
+
+class PingResult extends $pb.GeneratedMessage {
+  factory PingResult({
+    RequestID? id,
+    $fixnum.Int64? serverTime,
+  }) {
+    final $result = create();
+    if (id != null) {
+      $result.id = id;
+    }
+    if (serverTime != null) {
+      $result.serverTime = serverTime;
+    }
+    return $result;
+  }
+  PingResult._() : super();
+  factory PingResult.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory PingResult.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'PingResult', createEmptyInstance: create)
+    ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
+    ..aInt64(2, _omitFieldNames ? '' : 'serverTime', protoName: 'serverTime')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  PingResult clone() => PingResult()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  PingResult copyWith(void Function(PingResult) updates) => super.copyWith((message) => updates(message as PingResult)) as PingResult;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PingResult create() => PingResult._();
+  PingResult createEmptyInstance() => create();
+  static $pb.PbList<PingResult> createRepeated() => $pb.PbList<PingResult>();
+  @$core.pragma('dart2js:noInline')
+  static PingResult getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PingResult>(create);
+  static PingResult? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  RequestID get id => $_getN(0);
+  @$pb.TagNumber(1)
+  set id(RequestID v) { setField(1, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => clearField(1);
+  @$pb.TagNumber(1)
+  RequestID ensureId() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get serverTime => $_getI64(1);
+  @$pb.TagNumber(2)
+  set serverTime($fixnum.Int64 v) { $_setInt64(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasServerTime() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearServerTime() => clearField(2);
 }
 
 

@@ -25,26 +25,21 @@ const RequestID$json = {
 final $typed_data.Uint8List requestIDDescriptor = $convert.base64Decode(
     'CglSZXF1ZXN0SUQSEgoEdXVpZBgBIAEoCVIEdXVpZA==');
 
-@$core.Deprecated('Use syncComponentDescriptor instead')
-const SyncComponent$json = {
-  '1': 'SyncComponent',
+@$core.Deprecated('Use syncDataComponentDescriptor instead')
+const SyncDataComponent$json = {
+  '1': 'SyncDataComponent',
   '2': [
-    {'1': 'type', '3': 1, '4': 1, '5': 9, '10': 'type'},
-    {'1': 'uuid', '3': 2, '4': 1, '5': 9, '10': 'uuid'},
+    {'1': 'factory', '3': 1, '4': 1, '5': 9, '10': 'factory'},
+    {'1': 'id', '3': 2, '4': 1, '5': 9, '10': 'id'},
     {'1': 'removed', '3': 3, '4': 1, '5': 8, '10': 'removed'},
-    {'1': 'position', '3': 4, '4': 3, '5': 1, '10': 'position'},
-    {'1': 'size', '3': 5, '4': 3, '5': 1, '10': 'size'},
-    {'1': 'scale', '3': 6, '4': 3, '5': 1, '10': 'scale'},
-    {'1': 'angle', '3': 7, '4': 1, '5': 1, '10': 'angle'},
+    {'1': 'props', '3': 4, '4': 1, '5': 9, '10': 'props'},
   ],
 };
 
-/// Descriptor for `SyncComponent`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List syncComponentDescriptor = $convert.base64Decode(
-    'Cg1TeW5jQ29tcG9uZW50EhIKBHR5cGUYASABKAlSBHR5cGUSEgoEdXVpZBgCIAEoCVIEdXVpZB'
-    'IYCgdyZW1vdmVkGAMgASgIUgdyZW1vdmVkEhoKCHBvc2l0aW9uGAQgAygBUghwb3NpdGlvbhIS'
-    'CgRzaXplGAUgAygBUgRzaXplEhQKBXNjYWxlGAYgAygBUgVzY2FsZRIUCgVhbmdsZRgHIAEoAV'
-    'IFYW5nbGU=');
+/// Descriptor for `SyncDataComponent`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List syncDataComponentDescriptor = $convert.base64Decode(
+    'ChFTeW5jRGF0YUNvbXBvbmVudBIYCgdmYWN0b3J5GAEgASgJUgdmYWN0b3J5Eg4KAmlkGAIgAS'
+    'gJUgJpZBIYCgdyZW1vdmVkGAMgASgIUgdyZW1vdmVkEhQKBXByb3BzGAQgASgJUgVwcm9wcw==');
 
 @$core.Deprecated('Use syncArgDescriptor instead')
 const SyncArg$json = {
@@ -63,12 +58,40 @@ const SyncData$json = {
   '1': 'SyncData',
   '2': [
     {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
-    {'1': 'components', '3': 3, '4': 3, '5': 11, '6': '.SyncComponent', '10': 'components'},
+    {'1': 'groupd', '3': 2, '4': 1, '5': 9, '10': 'groupd'},
+    {'1': 'components', '3': 3, '4': 3, '5': 11, '6': '.SyncDataComponent', '10': 'components'},
   ],
 };
 
 /// Descriptor for `SyncData`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List syncDataDescriptor = $convert.base64Decode(
-    'CghTeW5jRGF0YRIaCgJpZBgBIAEoCzIKLlJlcXVlc3RJRFICaWQSLgoKY29tcG9uZW50cxgDIA'
-    'MoCzIOLlN5bmNDb21wb25lbnRSCmNvbXBvbmVudHM=');
+    'CghTeW5jRGF0YRIaCgJpZBgBIAEoCzIKLlJlcXVlc3RJRFICaWQSFgoGZ3JvdXBkGAIgASgJUg'
+    'Zncm91cGQSMgoKY29tcG9uZW50cxgDIAMoCzISLlN5bmNEYXRhQ29tcG9uZW50Ugpjb21wb25l'
+    'bnRz');
+
+@$core.Deprecated('Use pingArgDescriptor instead')
+const PingArg$json = {
+  '1': 'PingArg',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+  ],
+};
+
+/// Descriptor for `PingArg`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List pingArgDescriptor = $convert.base64Decode(
+    'CgdQaW5nQXJnEhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZA==');
+
+@$core.Deprecated('Use pingResultDescriptor instead')
+const PingResult$json = {
+  '1': 'PingResult',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+    {'1': 'serverTime', '3': 2, '4': 1, '5': 3, '10': 'serverTime'},
+  ],
+};
+
+/// Descriptor for `PingResult`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List pingResultDescriptor = $convert.base64Decode(
+    'CgpQaW5nUmVzdWx0EhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZBIeCgpzZXJ2ZXJUaW1lGA'
+    'IgASgDUgpzZXJ2ZXJUaW1l');
 
