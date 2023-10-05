@@ -1,7 +1,5 @@
 library flame_network;
 
-/// A Calculator.
-class Calculator {
-  /// Returns [value] plus 1.
-  int addOne(int value) => value + 1;
-}
+export 'src/network/grpc.dart';
+export 'src/network/network.dart';
+export 'src/component/component.dart';

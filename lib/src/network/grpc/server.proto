@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+message RequestID { string uuid = 1; }
+
+message SyncComponent {
+  string type = 1;
+  string uuid = 2;
+  bool removed = 3;
+  repeated double position = 4;
+  repeated double size = 5;
+  repeated double scale = 6;
+  double angle = 7;
+}
+
+message SyncArg { RequestID id = 1; }
+
+message SyncData {
+  RequestID id = 1;
+  repeated SyncComponent components = 3;
+}
+
+service Server {
+  rpc MonitorSync(SyncArg) returns (stream SyncData) {}
+}

@@ -8,9 +8,16 @@ environment:
   flutter: ">=1.17.0"
 
 dependencies:
+  flame: ^1.9.1
   flame_forge2d: ^0.15.0+1
   flutter:
     sdk: flutter
+  grpc: ^3.2.4
+  http2: ^2.2.0
+  intl: ^0.18.1
+  logger: ^2.0.2+1
+  protobuf: ^3.1.0
+  uuid: ^4.1.0
 
 dev_dependencies:
   flutter_test:
