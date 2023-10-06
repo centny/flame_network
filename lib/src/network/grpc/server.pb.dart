@@ -64,10 +64,128 @@ class RequestID extends $pb.GeneratedMessage {
   void clearUuid() => clearField(1);
 }
 
+class PingArg extends $pb.GeneratedMessage {
+  factory PingArg({
+    RequestID? id,
+  }) {
+    final $result = create();
+    if (id != null) {
+      $result.id = id;
+    }
+    return $result;
+  }
+  PingArg._() : super();
+  factory PingArg.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory PingArg.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'PingArg', createEmptyInstance: create)
+    ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  PingArg clone() => PingArg()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  PingArg copyWith(void Function(PingArg) updates) => super.copyWith((message) => updates(message as PingArg)) as PingArg;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PingArg create() => PingArg._();
+  PingArg createEmptyInstance() => create();
+  static $pb.PbList<PingArg> createRepeated() => $pb.PbList<PingArg>();
+  @$core.pragma('dart2js:noInline')
+  static PingArg getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PingArg>(create);
+  static PingArg? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  RequestID get id => $_getN(0);
+  @$pb.TagNumber(1)
+  set id(RequestID v) { setField(1, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => clearField(1);
+  @$pb.TagNumber(1)
+  RequestID ensureId() => $_ensure(0);
+}
+
+class PingResult extends $pb.GeneratedMessage {
+  factory PingResult({
+    RequestID? id,
+    $fixnum.Int64? serverTime,
+  }) {
+    final $result = create();
+    if (id != null) {
+      $result.id = id;
+    }
+    if (serverTime != null) {
+      $result.serverTime = serverTime;
+    }
+    return $result;
+  }
+  PingResult._() : super();
+  factory PingResult.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory PingResult.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'PingResult', createEmptyInstance: create)
+    ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
+    ..aInt64(2, _omitFieldNames ? '' : 'serverTime', protoName: 'serverTime')
+    ..hasRequiredFields = false
+  ;
+
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
+  'Will be removed in next major version')
+  PingResult clone() => PingResult()..mergeFromMessage(this);
+  @$core.Deprecated(
+  'Using this can add significant overhead to your binary. '
+  'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
+  'Will be removed in next major version')
+  PingResult copyWith(void Function(PingResult) updates) => super.copyWith((message) => updates(message as PingResult)) as PingResult;
+
+  $pb.BuilderInfo get info_ => _i;
+
+  @$core.pragma('dart2js:noInline')
+  static PingResult create() => PingResult._();
+  PingResult createEmptyInstance() => create();
+  static $pb.PbList<PingResult> createRepeated() => $pb.PbList<PingResult>();
+  @$core.pragma('dart2js:noInline')
+  static PingResult getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PingResult>(create);
+  static PingResult? _defaultInstance;
+
+  @$pb.TagNumber(1)
+  RequestID get id => $_getN(0);
+  @$pb.TagNumber(1)
+  set id(RequestID v) { setField(1, v); }
+  @$pb.TagNumber(1)
+  $core.bool hasId() => $_has(0);
+  @$pb.TagNumber(1)
+  void clearId() => clearField(1);
+  @$pb.TagNumber(1)
+  RequestID ensureId() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $fixnum.Int64 get serverTime => $_getI64(1);
+  @$pb.TagNumber(2)
+  set serverTime($fixnum.Int64 v) { $_setInt64(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasServerTime() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearServerTime() => clearField(2);
+}
+
 class SyncDataComponent extends $pb.GeneratedMessage {
   factory SyncDataComponent({
     $core.String? factory,
-    $core.String? id,
+    $core.String? cid,
     $core.bool? removed,
     $core.String? props,
   }) {
@@ -75,8 +193,8 @@ class SyncDataComponent extends $pb.GeneratedMessage {
     if (factory != null) {
       $result.factory = factory;
     }
-    if (id != null) {
-      $result.id = id;
+    if (cid != null) {
+      $result.cid = cid;
     }
     if (removed != null) {
       $result.removed = removed;
@@ -92,7 +210,7 @@ class SyncDataComponent extends $pb.GeneratedMessage {
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SyncDataComponent', createEmptyInstance: create)
     ..aOS(1, _omitFieldNames ? '' : 'factory')
-    ..aOS(2, _omitFieldNames ? '' : 'id')
+    ..aOS(2, _omitFieldNames ? '' : 'cid')
     ..aOB(3, _omitFieldNames ? '' : 'removed')
     ..aOS(4, _omitFieldNames ? '' : 'props')
     ..hasRequiredFields = false
@@ -129,13 +247,13 @@ class SyncDataComponent extends $pb.GeneratedMessage {
   void clearFactory() => clearField(1);
 
   @$pb.TagNumber(2)
-  $core.String get id => $_getSZ(1);
+  $core.String get cid => $_getSZ(1);
   @$pb.TagNumber(2)
-  set id($core.String v) { $_setString(1, v); }
+  set cid($core.String v) { $_setString(1, v); }
   @$pb.TagNumber(2)
-  $core.bool hasId() => $_has(1);
+  $core.bool hasCid() => $_has(1);
   @$pb.TagNumber(2)
-  void clearId() => clearField(2);
+  void clearCid() => clearField(2);
 
   @$pb.TagNumber(3)
   $core.bool get removed => $_getBF(2);
@@ -282,22 +400,37 @@ class SyncData extends $pb.GeneratedMessage {
   $core.List<SyncDataComponent> get components => $_getList(2);
 }
 
-class PingArg extends $pb.GeneratedMessage {
-  factory PingArg({
+class CallArg extends $pb.GeneratedMessage {
+  factory CallArg({
     RequestID? id,
+    $core.String? cid,
+    $core.String? name,
+    $core.String? arg,
   }) {
     final $result = create();
     if (id != null) {
       $result.id = id;
     }
+    if (cid != null) {
+      $result.cid = cid;
+    }
+    if (name != null) {
+      $result.name = name;
+    }
+    if (arg != null) {
+      $result.arg = arg;
+    }
     return $result;
   }
-  PingArg._() : super();
-  factory PingArg.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
-  factory PingArg.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  CallArg._() : super();
+  factory CallArg.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory CallArg.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
 
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'PingArg', createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'CallArg', createEmptyInstance: create)
     ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
+    ..aOS(2, _omitFieldNames ? '' : 'cid')
+    ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..aOS(4, _omitFieldNames ? '' : 'arg')
     ..hasRequiredFields = false
   ;
 
@@ -305,22 +438,22 @@ class PingArg extends $pb.GeneratedMessage {
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
-  PingArg clone() => PingArg()..mergeFromMessage(this);
+  CallArg clone() => CallArg()..mergeFromMessage(this);
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
-  PingArg copyWith(void Function(PingArg) updates) => super.copyWith((message) => updates(message as PingArg)) as PingArg;
+  CallArg copyWith(void Function(CallArg) updates) => super.copyWith((message) => updates(message as CallArg)) as CallArg;
 
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
-  static PingArg create() => PingArg._();
-  PingArg createEmptyInstance() => create();
-  static $pb.PbList<PingArg> createRepeated() => $pb.PbList<PingArg>();
+  static CallArg create() => CallArg._();
+  CallArg createEmptyInstance() => create();
+  static $pb.PbList<CallArg> createRepeated() => $pb.PbList<CallArg>();
   @$core.pragma('dart2js:noInline')
-  static PingArg getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PingArg>(create);
-  static PingArg? _defaultInstance;
+  static CallArg getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CallArg>(create);
+  static CallArg? _defaultInstance;
 
   @$pb.TagNumber(1)
   RequestID get id => $_getN(0);
@@ -332,29 +465,71 @@ class PingArg extends $pb.GeneratedMessage {
   void clearId() => clearField(1);
   @$pb.TagNumber(1)
   RequestID ensureId() => $_ensure(0);
+
+  @$pb.TagNumber(2)
+  $core.String get cid => $_getSZ(1);
+  @$pb.TagNumber(2)
+  set cid($core.String v) { $_setString(1, v); }
+  @$pb.TagNumber(2)
+  $core.bool hasCid() => $_has(1);
+  @$pb.TagNumber(2)
+  void clearCid() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get name => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set name($core.String v) { $_setString(2, v); }
+  @$pb.TagNumber(3)
+  $core.bool hasName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearName() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get arg => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set arg($core.String v) { $_setString(3, v); }
+  @$pb.TagNumber(4)
+  $core.bool hasArg() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearArg() => clearField(4);
 }
 
-class PingResult extends $pb.GeneratedMessage {
-  factory PingResult({
+class CallResult extends $pb.GeneratedMessage {
+  factory CallResult({
     RequestID? id,
-    $fixnum.Int64? serverTime,
+    $core.String? cid,
+    $core.String? name,
+    $core.String? result,
+    $core.String? error,
   }) {
     final $result = create();
     if (id != null) {
       $result.id = id;
     }
-    if (serverTime != null) {
-      $result.serverTime = serverTime;
+    if (cid != null) {
+      $result.cid = cid;
+    }
+    if (name != null) {
+      $result.name = name;
+    }
+    if (result != null) {
+      $result.result = result;
+    }
+    if (error != null) {
+      $result.error = error;
     }
     return $result;
   }
-  PingResult._() : super();
-  factory PingResult.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
-  factory PingResult.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
+  CallResult._() : super();
+  factory CallResult.fromBuffer($core.List<$core.int> i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromBuffer(i, r);
+  factory CallResult.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
 
-  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'PingResult', createEmptyInstance: create)
+  static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'CallResult', createEmptyInstance: create)
     ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
-    ..aInt64(2, _omitFieldNames ? '' : 'serverTime', protoName: 'serverTime')
+    ..aOS(2, _omitFieldNames ? '' : 'cid')
+    ..aOS(3, _omitFieldNames ? '' : 'name')
+    ..aOS(4, _omitFieldNames ? '' : 'result')
+    ..aOS(5, _omitFieldNames ? '' : 'error')
     ..hasRequiredFields = false
   ;
 
@@ -362,22 +537,22 @@ class PingResult extends $pb.GeneratedMessage {
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.deepCopy] instead. '
   'Will be removed in next major version')
-  PingResult clone() => PingResult()..mergeFromMessage(this);
+  CallResult clone() => CallResult()..mergeFromMessage(this);
   @$core.Deprecated(
   'Using this can add significant overhead to your binary. '
   'Use [GeneratedMessageGenericExtensions.rebuild] instead. '
   'Will be removed in next major version')
-  PingResult copyWith(void Function(PingResult) updates) => super.copyWith((message) => updates(message as PingResult)) as PingResult;
+  CallResult copyWith(void Function(CallResult) updates) => super.copyWith((message) => updates(message as CallResult)) as CallResult;
 
   $pb.BuilderInfo get info_ => _i;
 
   @$core.pragma('dart2js:noInline')
-  static PingResult create() => PingResult._();
-  PingResult createEmptyInstance() => create();
-  static $pb.PbList<PingResult> createRepeated() => $pb.PbList<PingResult>();
+  static CallResult create() => CallResult._();
+  CallResult createEmptyInstance() => create();
+  static $pb.PbList<CallResult> createRepeated() => $pb.PbList<CallResult>();
   @$core.pragma('dart2js:noInline')
-  static PingResult getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<PingResult>(create);
-  static PingResult? _defaultInstance;
+  static CallResult getDefault() => _defaultInstance ??= $pb.GeneratedMessage.$_defaultFor<CallResult>(create);
+  static CallResult? _defaultInstance;
 
   @$pb.TagNumber(1)
   RequestID get id => $_getN(0);
@@ -391,13 +566,40 @@ class PingResult extends $pb.GeneratedMessage {
   RequestID ensureId() => $_ensure(0);
 
   @$pb.TagNumber(2)
-  $fixnum.Int64 get serverTime => $_getI64(1);
+  $core.String get cid => $_getSZ(1);
   @$pb.TagNumber(2)
-  set serverTime($fixnum.Int64 v) { $_setInt64(1, v); }
+  set cid($core.String v) { $_setString(1, v); }
   @$pb.TagNumber(2)
-  $core.bool hasServerTime() => $_has(1);
+  $core.bool hasCid() => $_has(1);
   @$pb.TagNumber(2)
-  void clearServerTime() => clearField(2);
+  void clearCid() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.String get name => $_getSZ(2);
+  @$pb.TagNumber(3)
+  set name($core.String v) { $_setString(2, v); }
+  @$pb.TagNumber(3)
+  $core.bool hasName() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearName() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.String get result => $_getSZ(3);
+  @$pb.TagNumber(4)
+  set result($core.String v) { $_setString(3, v); }
+  @$pb.TagNumber(4)
+  $core.bool hasResult() => $_has(3);
+  @$pb.TagNumber(4)
+  void clearResult() => clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get error => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set error($core.String v) { $_setString(4, v); }
+  @$pb.TagNumber(5)
+  $core.bool hasError() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearError() => clearField(5);
 }
 
 

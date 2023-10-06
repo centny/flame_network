@@ -2,9 +2,16 @@ syntax = "proto3";
 
 message RequestID { string uuid = 1; }
 
+message PingArg { RequestID id = 1; }
+
+message PingResult {
+  RequestID id = 1;
+  int64 serverTime = 2;
+}
+
 message SyncDataComponent {
   string factory = 1;
-  string id = 2;
+  string cid = 2;
   bool removed = 3;
   string props = 4;
 }
@@ -17,14 +24,23 @@ message SyncData {
   repeated SyncDataComponent components = 3;
 }
 
-message PingArg { RequestID id = 1; }
-
-message PingResult {
+message CallArg {
   RequestID id = 1;
-  int64 serverTime = 2;
+  string cid = 2;
+  string name = 3;
+  string arg = 4;
+}
+
+message CallResult {
+  RequestID id = 1;
+  string cid = 2;
+  string name = 3;
+  string result = 4;
+  string error = 5;
 }
 
 service Server {
-  rpc CallPing(PingArg) returns (PingResult) {}
-  rpc CallMonitorSync(SyncArg) returns (stream SyncData) {}
+  rpc remotePing(PingArg) returns (PingResult) {}
+  rpc remoteSync(SyncArg) returns (stream SyncData) {}
+  rpc remoteCall(CallArg) returns (CallResult) {}
 }

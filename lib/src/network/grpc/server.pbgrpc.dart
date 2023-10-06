@@ -21,14 +21,18 @@ export 'server.pb.dart';
 
 @$pb.GrpcServiceName('Server')
 class ServerClient extends $grpc.Client {
-  static final _$callPing = $grpc.ClientMethod<$0.PingArg, $0.PingResult>(
-      '/Server/CallPing',
+  static final _$remotePing = $grpc.ClientMethod<$0.PingArg, $0.PingResult>(
+      '/Server/remotePing',
       ($0.PingArg value) => value.writeToBuffer(),
       ($core.List<$core.int> value) => $0.PingResult.fromBuffer(value));
-  static final _$callMonitorSync = $grpc.ClientMethod<$0.SyncArg, $0.SyncData>(
-      '/Server/CallMonitorSync',
+  static final _$remoteSync = $grpc.ClientMethod<$0.SyncArg, $0.SyncData>(
+      '/Server/remoteSync',
       ($0.SyncArg value) => value.writeToBuffer(),
       ($core.List<$core.int> value) => $0.SyncData.fromBuffer(value));
+  static final _$remoteCall = $grpc.ClientMethod<$0.CallArg, $0.CallResult>(
+      '/Server/remoteCall',
+      ($0.CallArg value) => value.writeToBuffer(),
+      ($core.List<$core.int> value) => $0.CallResult.fromBuffer(value));
 
   ServerClient($grpc.ClientChannel channel,
       {$grpc.CallOptions? options,
@@ -36,12 +40,16 @@ class ServerClient extends $grpc.Client {
       : super(channel, options: options,
         interceptors: interceptors);
 
-  $grpc.ResponseFuture<$0.PingResult> callPing($0.PingArg request, {$grpc.CallOptions? options}) {
-    return $createUnaryCall(_$callPing, request, options: options);
+  $grpc.ResponseFuture<$0.PingResult> remotePing($0.PingArg request, {$grpc.CallOptions? options}) {
+    return $createUnaryCall(_$remotePing, request, options: options);
   }
 
-  $grpc.ResponseStream<$0.SyncData> callMonitorSync($0.SyncArg request, {$grpc.CallOptions? options}) {
-    return $createStreamingCall(_$callMonitorSync, $async.Stream.fromIterable([request]), options: options);
+  $grpc.ResponseStream<$0.SyncData> remoteSync($0.SyncArg request, {$grpc.CallOptions? options}) {
+    return $createStreamingCall(_$remoteSync, $async.Stream.fromIterable([request]), options: options);
+  }
+
+  $grpc.ResponseFuture<$0.CallResult> remoteCall($0.CallArg request, {$grpc.CallOptions? options}) {
+    return $createUnaryCall(_$remoteCall, request, options: options);
   }
 }
 
@@ -51,29 +59,41 @@ abstract class ServerServiceBase extends $grpc.Service {
 
   ServerServiceBase() {
     $addMethod($grpc.ServiceMethod<$0.PingArg, $0.PingResult>(
-        'CallPing',
-        callPing_Pre,
+        'remotePing',
+        remotePing_Pre,
         false,
         false,
         ($core.List<$core.int> value) => $0.PingArg.fromBuffer(value),
         ($0.PingResult value) => value.writeToBuffer()));
     $addMethod($grpc.ServiceMethod<$0.SyncArg, $0.SyncData>(
-        'CallMonitorSync',
-        callMonitorSync_Pre,
+        'remoteSync',
+        remoteSync_Pre,
         false,
         true,
         ($core.List<$core.int> value) => $0.SyncArg.fromBuffer(value),
         ($0.SyncData value) => value.writeToBuffer()));
+    $addMethod($grpc.ServiceMethod<$0.CallArg, $0.CallResult>(
+        'remoteCall',
+        remoteCall_Pre,
+        false,
+        false,
+        ($core.List<$core.int> value) => $0.CallArg.fromBuffer(value),
+        ($0.CallResult value) => value.writeToBuffer()));
   }
 
-  $async.Future<$0.PingResult> callPing_Pre($grpc.ServiceCall call, $async.Future<$0.PingArg> request) async {
-    return callPing(call, await request);
+  $async.Future<$0.PingResult> remotePing_Pre($grpc.ServiceCall call, $async.Future<$0.PingArg> request) async {
+    return remotePing(call, await request);
   }
 
-  $async.Stream<$0.SyncData> callMonitorSync_Pre($grpc.ServiceCall call, $async.Future<$0.SyncArg> request) async* {
-    yield* callMonitorSync(call, await request);
+  $async.Stream<$0.SyncData> remoteSync_Pre($grpc.ServiceCall call, $async.Future<$0.SyncArg> request) async* {
+    yield* remoteSync(call, await request);
   }
 
-  $async.Future<$0.PingResult> callPing($grpc.ServiceCall call, $0.PingArg request);
-  $async.Stream<$0.SyncData> callMonitorSync($grpc.ServiceCall call, $0.SyncArg request);
+  $async.Future<$0.CallResult> remoteCall_Pre($grpc.ServiceCall call, $async.Future<$0.CallArg> request) async {
+    return remoteCall(call, await request);
+  }
+
+  $async.Future<$0.PingResult> remotePing($grpc.ServiceCall call, $0.PingArg request);
+  $async.Stream<$0.SyncData> remoteSync($grpc.ServiceCall call, $0.SyncArg request);
+  $async.Future<$0.CallResult> remoteCall($grpc.ServiceCall call, $0.CallArg request);
 }

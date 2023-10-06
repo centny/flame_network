@@ -59,39 +59,55 @@ mixin NetworkTransport {
   NetworkSession session = NetworkSession.create();
   Duration keepalive = const Duration(seconds: 3);
   Duration timeout = const Duration(seconds: 10);
-  NetworkCallback? callback;
+  late NetworkCallback callback;
   bool isServer = false;
   bool isClient = false;
   String host = "127.0.0.1";
   int port = 50051;
-  void networkSync(NetworkSyncData data);
+  Future<void> networkSync(NetworkSyncData data);
+  Future<NetworkCallResult> networkCall(NetworkCallArg arg);
+}
+
+abstract class NetworkManager with NetworkTransport {
+  static NetworkManager? _global;
+
+  static NetworkManager get global {
+    if (_global == null) {
+      throw UnimplementedError("NetworkManager is not configured or extend from NetworkManager");
+    }
+    return _global!;
+  }
+
+  NetworkManager() {
+    _global = this;
+  }
 }
 
 class NetworkCallArg {
   String uuid;
-  String nID;
+  String nCID;
   String nName;
   String nArg;
 
-  NetworkCallArg({required this.uuid, required this.nID, required this.nName, required this.nArg});
+  NetworkCallArg({required this.uuid, required this.nCID, required this.nName, required this.nArg});
 }
 
 class NetworkCallResult {
   String uuid;
-  String nID;
+  String nCID;
   String nName;
   String nResult;
 
-  NetworkCallResult({required this.uuid, required this.nID, required this.nName, required this.nResult});
+  NetworkCallResult({required this.uuid, required this.nCID, required this.nName, required this.nResult});
 }
 
 class NetworkSyncDataComponent {
   String nFactory;
-  String nID;
+  String nCID;
   bool? nRemoved;
   Map<String, dynamic>? nProps = {};
 
-  NetworkSyncDataComponent({required this.nFactory, required this.nID, this.nRemoved, this.nProps});
+  NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nRemoved, this.nProps});
 }
 
 class NetworkSyncData {
@@ -114,15 +130,21 @@ class NetworkCall<R, S> {
   NetworkCallFunction<R, S>? exec;
   NetworkCall(this.name, {this.exec});
 
-  Future<String> call(String uuid, String s) async {
-    var arg = decode(s);
-    var r = await exec!(uuid, arg);
+  Future<String> run(String uuid, String arg) async {
+    var a = decode(arg);
+    var r = await exec!(uuid, a);
     return encode(r);
   }
 
-  S decode(String v) => jsonDecode(v);
+  Future<R> call(NetworkComponent c, S arg) async {
+    var a = NetworkCallArg(uuid: const Uuid().v1(), nCID: c.nCID, nName: name, nArg: encode(arg));
+    var r = await NetworkManager.global.networkCall(a);
+    return decode(r.nResult);
+  }
 
-  String encode(R r) => jsonEncode(r);
+  dynamic decode(String v) => jsonDecode(v);
+
+  String encode(dynamic v) => jsonEncode(v);
 }
 
 class NetworkProp<T> {
@@ -181,9 +203,12 @@ mixin NetworkComponent {
 
   String get nFactory;
   String get nGroup => "";
-  String get nID;
+  String get nCID;
   bool get nRemoved;
   bool get nUpdated => _updated;
+
+  //--------------------------//
+  //------ NetworkComponent -------//
 
   static void registerFactory(String key, NetworkComponentFactory creator) => _factoryAll[key] = creator;
 
@@ -192,7 +217,7 @@ mixin NetworkComponent {
   static void Function(NetworkComponent)? onAdd;
   static void Function(NetworkComponent)? onRemove;
 
-  static NetworkComponent? findComponent(String nID) => _componentAll[nID];
+  static NetworkComponent? findComponent(String nCID) => _componentAll[nCID];
 
   static Map<String, NetworkComponent> listGroupComponent(String group) {
     var componentGroup = _componentGroup[group];
@@ -204,24 +229,24 @@ mixin NetworkComponent {
   }
 
   static void _addComponent(NetworkComponent c) {
-    if (_componentAll.containsKey(c.nID)) {
+    if (_componentAll.containsKey(c.nCID)) {
       return;
     }
-    _componentAll[c.nID] = c;
-    listGroupComponent(c.nGroup)[c.nID] = c;
-    listGroupComponent("*")[c.nID] = c;
+    _componentAll[c.nCID] = c;
+    listGroupComponent(c.nGroup)[c.nCID] = c;
+    listGroupComponent("*")[c.nCID] = c;
     if (onAdd != null) {
       onAdd!(c);
     }
   }
 
   static void _removeComponent(NetworkComponent c) {
-    if (!_componentAll.containsKey(c.nID)) {
+    if (!_componentAll.containsKey(c.nCID)) {
       return;
     }
-    _componentAll.remove(c.nID);
-    listGroupComponent(c.nGroup).remove(c.nID);
-    listGroupComponent("*").remove(c.nID);
+    _componentAll.remove(c.nCID);
+    listGroupComponent(c.nGroup).remove(c.nCID);
+    listGroupComponent("*").remove(c.nCID);
     c.onNetworkRemove();
     if (onRemove != null) {
       onRemove!(c);
@@ -233,6 +258,11 @@ mixin NetworkComponent {
       _removeComponent(this);
     }
   }
+
+  void onNetworkRemove();
+
+  //--------------------------//
+  //------ NetworkProp -------//
 
   void registerNetworkProp<T>(NetworkProp<T> prop, {T Function()? getter, void Function(T v)? setter}) {
     prop.getter = getter;
@@ -249,22 +279,6 @@ mixin NetworkComponent {
 
   void clearNetworkProp() {
     _props.clear();
-    _removeComponentCheck();
-  }
-
-  void registerNetworkCall<R, S>(NetworkCall<R, S> call, NetworkCallFunction<R, S> exec) {
-    call.exec = exec;
-    _calls[call.name] = call;
-    _addComponent(this);
-  }
-
-  void unregisterNetworkCall<R, S>(NetworkCall<R, S> call) {
-    _calls.remove(call.name);
-    _removeComponentCheck();
-  }
-
-  void clearNetworkCall() {
-    _calls.clear();
     _removeComponentCheck();
   }
 
@@ -287,26 +301,11 @@ mixin NetworkComponent {
     for (var name in updated.keys) {
       var prop = _props[name];
       if (prop == null) {
-        L.w("NetworkComponent($nFactory,$nID) prop $name is not exists");
+        L.w("NetworkComponent($nFactory,$nCID) prop $name is not exists");
         continue;
       }
       prop.decode(updated[name]);
     }
-  }
-
-  void onNetworkRemove();
-
-  static Future<NetworkCallResult> callNetworkCall(NetworkCallArg arg) async {
-    var c = findComponent(arg.nID);
-    if (c == null) {
-      throw Exception("NetworkComponent(${arg.nID}) is not exists");
-    }
-    var call = c._calls[arg.nName];
-    if (call == null) {
-      throw Exception("NetworkComponent(${arg.nID}) call ${arg.nName} is not exists");
-    }
-    var result = await call.call(arg.uuid, arg.nArg);
-    return NetworkCallResult(uuid: arg.uuid, nID: arg.nID, nName: arg.nName, nResult: result);
   }
 
   static List<NetworkSyncDataComponent> syncSend(String group) {
@@ -320,20 +319,20 @@ mixin NetworkComponent {
       }
       var props = c.checkNetworkProp();
       if (props.isNotEmpty) {
-        components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nID: c.nID, nProps: props));
+        components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nProps: props));
         continue;
       }
     }
     for (var c in willRemove) {
       _removeComponent(c);
-      components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nID: c.nID, nRemoved: true));
+      components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nRemoved: true));
     }
     return components;
   }
 
   static void syncRecv(String group, List<NetworkSyncDataComponent> components) {
     for (var c in components) {
-      var component = findComponent(c.nID);
+      var component = findComponent(c.nCID);
       if (c.nRemoved ?? false) {
         if (component != null) {
           _removeComponent(component);
@@ -345,5 +344,41 @@ mixin NetworkComponent {
         component.updateNetworkProp(c.nProps ?? {});
       }
     }
+  }
+
+  //--------------------------//
+  //------ NetworkCall -------//
+
+  void registerNetworkCall<R, S>(NetworkCall<R, S> call, NetworkCallFunction<R, S> exec) {
+    call.exec = exec;
+    _calls[call.name] = call;
+    _addComponent(this);
+  }
+
+  void unregisterNetworkCall<R, S>(NetworkCall<R, S> call) {
+    _calls.remove(call.name);
+    _removeComponentCheck();
+  }
+
+  void clearNetworkCall() {
+    _calls.clear();
+    _removeComponentCheck();
+  }
+
+  Future<R> networkCall<R, S>(NetworkCall<R, S> call, S arg) {
+    return call.call(this, arg);
+  }
+
+  static Future<NetworkCallResult> callNetworkCall(NetworkCallArg arg) async {
+    var c = findComponent(arg.nCID);
+    if (c == null) {
+      throw Exception("NetworkComponent(${arg.nCID}) is not exists");
+    }
+    var call = c._calls[arg.nName];
+    if (call == null) {
+      throw Exception("NetworkComponent(${arg.nCID}) call ${arg.nName} is not exists");
+    }
+    var result = await call.run(arg.uuid, arg.nArg);
+    return NetworkCallResult(uuid: arg.uuid, nCID: arg.nCID, nName: arg.nName, nResult: result);
   }
 }

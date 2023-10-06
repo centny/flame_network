@@ -45,6 +45,16 @@ class TestNetworkCallback with NetworkCallback {
     L.i("[Test] sync data $data");
     _dataWaiter.add(data.uuid);
   }
+
+  @override
+  Future<NetworkCallResult> onNetworkCall(NetworkConnection conn, NetworkCallArg arg) async {
+    if (arg.nName == "error") {
+      L.i("[Test] call ${arg.nCID}.${arg.nName} ${arg.nArg} => error");
+      throw Exception("test error");
+    }
+    L.i("[Test] call ${arg.nCID}.${arg.nName} ${arg.nArg}");
+    return NetworkCallResult(uuid: arg.uuid, nCID: arg.nCID, nName: arg.nName, nResult: arg.nArg);
+  }
 }
 
 class TestNetworkCall {}
@@ -61,12 +71,24 @@ void main() {
     NetworkManagerGRPC.shared.networkSync(NetworkSyncData.create(components: [
       NetworkSyncDataComponent(
         nFactory: "type",
-        nID: "uuid",
+        nCID: "uuid",
         nRemoved: false,
       )
     ]));
     var received = await callback.waitData();
     L.i("data is $received");
+    await NetworkManagerGRPC.shared.stop();
+  });
+  test('NetworkGRPC.call', () async {
+    var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.isServer = true;
+    NetworkManagerGRPC.shared.isClient = true;
+    NetworkManagerGRPC.shared.callback = callback;
+    await NetworkManagerGRPC.shared.start();
+    var connected = await callback.waitConn();
+    L.i("conn is $connected");
+    var result = await NetworkManagerGRPC.shared.networkCall(NetworkCallArg(uuid: "123", nCID: "a", nName: "echo", nArg: "abc"));
+    assert(result.nResult == "abc");
     await NetworkManagerGRPC.shared.stop();
   });
   test('NetworkGRPC.ping', () async {
@@ -125,6 +147,10 @@ void main() {
     NetworkManagerGRPC.shared.callback = callback;
     await NetworkManagerGRPC.shared.start();
     await callback.waitConn();
+    try {
+      await NetworkManagerGRPC.shared.networkCall(NetworkCallArg(uuid: "123", nCID: "123", nName: "error", nArg: "abc"));
+      assert(false);
+    } catch (_) {}
     var client = NetworkManagerGRPC.shared.client;
     var connections = NetworkManagerGRPC.shared.server?.connections ?? [];
     await NetworkManagerGRPC.shared.stop();
@@ -143,6 +169,7 @@ void main() {
       L.i("${c.onFrameReceived}");
     }
     client?.onConnectionStateChanged(ConnectionState.transientFailure);
+    NetworkManagerGRPC.shared.onErrorHandler(const GrpcError.aborted(), null);
 
     //
     NetworkManagerGRPC.shared.isClient = false;

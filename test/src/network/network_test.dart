@@ -8,7 +8,7 @@ class TestNetworkComponent with NetworkComponent {
   @override
   String get nFactory => "test";
   @override
-  String get nID => "123";
+  String get nCID => "123";
   @override
   bool get nRemoved => removed;
 
@@ -29,7 +29,8 @@ class TestNetworkComponent with NetworkComponent {
   NetworkPropList<double> sDoubleList = NetworkPropList<double>("double_list", []);
   NetworkPropList<String> sStringList = NetworkPropList<String>("string_list", []);
 
-  NetworkCall<void, int> cInt = NetworkCall("int");
+  NetworkCall<void, int> cUpdate = NetworkCall("update");
+  NetworkCall<String, int> cParse = NetworkCall("parse");
 
   TestNetworkComponent() {
     registerNetworkProp(sInt, getter: () => intValue, setter: (v) => intValue = v);
@@ -40,7 +41,8 @@ class TestNetworkComponent with NetworkComponent {
     registerNetworkProp(sIntList, getter: () => intList, setter: (v) => intList = v);
     registerNetworkProp(sDoubleList, getter: () => doubleList, setter: (v) => doubleList = v);
     registerNetworkProp(sStringList, getter: () => stringList, setter: (v) => stringList = v);
-    registerNetworkCall(cInt, updateInt);
+    registerNetworkCall(cUpdate, updateInt);
+    registerNetworkCall(cParse, parseInt);
   }
 
   void unregister() {
@@ -52,7 +54,8 @@ class TestNetworkComponent with NetworkComponent {
     unregisterNetworkProp(sIntList);
     unregisterNetworkProp(sDoubleList);
     unregisterNetworkProp(sStringList);
-    unregisterNetworkCall(cInt);
+    unregisterNetworkCall(cUpdate);
+    unregisterNetworkCall(cParse);
     clearNetworkProp();
     clearNetworkCall();
   }
@@ -62,8 +65,37 @@ class TestNetworkComponent with NetworkComponent {
     sInt.value = v;
   }
 
+  Future<String> parseInt(String uuid, int v) async {
+    L.i("call $uuid parse int=>$v");
+    return "$v";
+  }
+
   @override
-  void onNetworkRemove() {}
+  void onNetworkRemove() {
+    removed = true;
+  }
+}
+
+class TestNetworkConnection with NetworkConnection {
+  @override
+  bool get isClient => throw UnimplementedError();
+
+  @override
+  bool get isServer => throw UnimplementedError();
+}
+
+class TestNetworkManager extends NetworkManager with NetworkCallback {
+  TestNetworkConnection conn = TestNetworkConnection();
+
+  @override
+  Future<NetworkCallResult> networkCall(NetworkCallArg arg) {
+    return onNetworkCall(conn, arg);
+  }
+
+  @override
+  Future<void> networkSync(NetworkSyncData data) {
+    return onNetworkSync(conn, data);
+  }
 }
 
 void main() {
@@ -78,13 +110,19 @@ void main() {
     assert(session0.hashCode == session1.hashCode);
     assert(session0 == session1);
   });
+  test('NetworkManager', () async {
+    try {
+      var _ = NetworkManager.global;
+      assert(false);
+    } catch (_) {}
+  });
   test('NetworkComponent.create', () async {
-    NetworkComponent.onAdd = (p0) => L.i("add ->${p0.nID}");
-    NetworkComponent.onRemove = (p0) => L.i("remove ->${p0.nID}");
+    NetworkComponent.onAdd = (p0) => L.i("add ->${p0.nCID}");
+    NetworkComponent.onRemove = (p0) => L.i("remove ->${p0.nCID}");
     var nc = TestNetworkComponent();
-    assert(NetworkComponent.findComponent(nc.nID) != null);
+    assert(NetworkComponent.findComponent(nc.nCID) != null);
     nc.unregister();
-    assert(NetworkComponent.findComponent(nc.nID) == null);
+    assert(NetworkComponent.findComponent(nc.nCID) == null);
   });
   test('NetworkComponent.prop', () async {
     var nc = TestNetworkComponent();
@@ -106,6 +144,8 @@ void main() {
     nc.unregister();
   });
   test('NetworkComponent.sync', () async {
+    var conn = TestNetworkConnection();
+    var cb = TestNetworkManager();
     var nc = TestNetworkComponent();
 
     var cs1 = NetworkComponent.syncSend("*");
@@ -114,20 +154,66 @@ void main() {
     assert(cs2.isEmpty);
     NetworkComponent.syncRecv("*", cs1);
 
-    nc.removed = true;
-    var cs3 = NetworkComponent.syncSend("*");
-    assert(cs3.length == 1);
-    NetworkComponent.syncRecv("*", cs3);
+    var data = NetworkSyncData.syncSend("*");
+    cb.onNetworkSync(conn, data);
 
     nc.unregister();
   });
+  test('NetworkComponent.remove', () async {
+    var nc1 = TestNetworkComponent();
+    nc1.removed = true;
+    var cs1 = NetworkComponent.syncSend("*");
+    assert(cs1.length == 1);
+    assert(NetworkComponent.findComponent(nc1.nCID) == null);
+    NetworkComponent.syncRecv("*", cs1);
+    nc1.unregister();
+
+    var nc2 = TestNetworkComponent();
+    var cs2 = NetworkComponent.syncSend("*");
+    assert(cs2.length == 1);
+    assert(NetworkComponent.findComponent(nc1.nCID) != null);
+    cs2[0].nRemoved = true;
+    NetworkComponent.syncRecv("*", cs2);
+    assert(NetworkComponent.findComponent(nc1.nCID) == null);
+    nc2.unregister();
+  });
+  test('NetworkComponent.factory', () async {
+    NetworkComponent.registerFactory("test", (group, id) => TestNetworkComponent());
+    assert(NetworkComponent.findComponent("123") == null);
+    var cs1 = [NetworkSyncDataComponent(nFactory: "test", nCID: "123")];
+    NetworkComponent.syncRecv("*", cs1);
+    assert(NetworkComponent.findComponent("123") != null);
+
+    var cs2 = [NetworkSyncDataComponent(nFactory: "test", nCID: "123", nRemoved: true)];
+    NetworkComponent.syncRecv("*", cs2);
+    assert(NetworkComponent.findComponent("123") == null);
+  });
   test('NetworkComponent.call', () async {
+    var _ = TestNetworkManager();
     var nc = TestNetworkComponent();
 
-    var result = await NetworkComponent.callNetworkCall(NetworkCallArg(uuid: const Uuid().v1(), nID: nc.nID, nName: nc.cInt.name, nArg: "100"));
-    assert(result.nResult == "null");
+    await nc.networkCall(nc.cUpdate, 100);
     assert(nc.intValue == 100);
 
+    var result = await nc.networkCall(nc.cParse, 200);
+    assert(result == "200");
+
+    //cover
+    try {
+      await NetworkComponent.callNetworkCall(NetworkCallArg(uuid: const Uuid().v1(), nCID: "none", nName: nc.cUpdate.name, nArg: "100"));
+      assert(false); //not reach
+    } catch (_) {}
+    try {
+      await NetworkComponent.callNetworkCall(NetworkCallArg(uuid: const Uuid().v1(), nCID: nc.nCID, nName: "none", nArg: "100"));
+      assert(false); //not reach
+    } catch (_) {}
+
     nc.unregister();
+  });
+
+  test('Network.cover', () async {
+    var conn = TestNetworkConnection();
+    var cb = TestNetworkManager();
+    cb.onNetworkState(conn, NetworkState.ready);
   });
 }

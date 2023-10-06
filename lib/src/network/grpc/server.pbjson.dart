@@ -25,12 +25,38 @@ const RequestID$json = {
 final $typed_data.Uint8List requestIDDescriptor = $convert.base64Decode(
     'CglSZXF1ZXN0SUQSEgoEdXVpZBgBIAEoCVIEdXVpZA==');
 
+@$core.Deprecated('Use pingArgDescriptor instead')
+const PingArg$json = {
+  '1': 'PingArg',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+  ],
+};
+
+/// Descriptor for `PingArg`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List pingArgDescriptor = $convert.base64Decode(
+    'CgdQaW5nQXJnEhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZA==');
+
+@$core.Deprecated('Use pingResultDescriptor instead')
+const PingResult$json = {
+  '1': 'PingResult',
+  '2': [
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+    {'1': 'serverTime', '3': 2, '4': 1, '5': 3, '10': 'serverTime'},
+  ],
+};
+
+/// Descriptor for `PingResult`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List pingResultDescriptor = $convert.base64Decode(
+    'CgpQaW5nUmVzdWx0EhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZBIeCgpzZXJ2ZXJUaW1lGA'
+    'IgASgDUgpzZXJ2ZXJUaW1l');
+
 @$core.Deprecated('Use syncDataComponentDescriptor instead')
 const SyncDataComponent$json = {
   '1': 'SyncDataComponent',
   '2': [
     {'1': 'factory', '3': 1, '4': 1, '5': 9, '10': 'factory'},
-    {'1': 'id', '3': 2, '4': 1, '5': 9, '10': 'id'},
+    {'1': 'cid', '3': 2, '4': 1, '5': 9, '10': 'cid'},
     {'1': 'removed', '3': 3, '4': 1, '5': 8, '10': 'removed'},
     {'1': 'props', '3': 4, '4': 1, '5': 9, '10': 'props'},
   ],
@@ -38,8 +64,8 @@ const SyncDataComponent$json = {
 
 /// Descriptor for `SyncDataComponent`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List syncDataComponentDescriptor = $convert.base64Decode(
-    'ChFTeW5jRGF0YUNvbXBvbmVudBIYCgdmYWN0b3J5GAEgASgJUgdmYWN0b3J5Eg4KAmlkGAIgAS'
-    'gJUgJpZBIYCgdyZW1vdmVkGAMgASgIUgdyZW1vdmVkEhQKBXByb3BzGAQgASgJUgVwcm9wcw==');
+    'ChFTeW5jRGF0YUNvbXBvbmVudBIYCgdmYWN0b3J5GAEgASgJUgdmYWN0b3J5EhAKA2NpZBgCIA'
+    'EoCVIDY2lkEhgKB3JlbW92ZWQYAyABKAhSB3JlbW92ZWQSFAoFcHJvcHMYBCABKAlSBXByb3Bz');
 
 @$core.Deprecated('Use syncArgDescriptor instead')
 const SyncArg$json = {
@@ -69,29 +95,37 @@ final $typed_data.Uint8List syncDataDescriptor = $convert.base64Decode(
     'Zncm91cGQSMgoKY29tcG9uZW50cxgDIAMoCzISLlN5bmNEYXRhQ29tcG9uZW50Ugpjb21wb25l'
     'bnRz');
 
-@$core.Deprecated('Use pingArgDescriptor instead')
-const PingArg$json = {
-  '1': 'PingArg',
+@$core.Deprecated('Use callArgDescriptor instead')
+const CallArg$json = {
+  '1': 'CallArg',
   '2': [
     {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+    {'1': 'cid', '3': 2, '4': 1, '5': 9, '10': 'cid'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'arg', '3': 4, '4': 1, '5': 9, '10': 'arg'},
   ],
 };
 
-/// Descriptor for `PingArg`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List pingArgDescriptor = $convert.base64Decode(
-    'CgdQaW5nQXJnEhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZA==');
+/// Descriptor for `CallArg`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List callArgDescriptor = $convert.base64Decode(
+    'CgdDYWxsQXJnEhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZBIQCgNjaWQYAiABKAlSA2NpZB'
+    'ISCgRuYW1lGAMgASgJUgRuYW1lEhAKA2FyZxgEIAEoCVIDYXJn');
 
-@$core.Deprecated('Use pingResultDescriptor instead')
-const PingResult$json = {
-  '1': 'PingResult',
+@$core.Deprecated('Use callResultDescriptor instead')
+const CallResult$json = {
+  '1': 'CallResult',
   '2': [
     {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
-    {'1': 'serverTime', '3': 2, '4': 1, '5': 3, '10': 'serverTime'},
+    {'1': 'cid', '3': 2, '4': 1, '5': 9, '10': 'cid'},
+    {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
+    {'1': 'result', '3': 4, '4': 1, '5': 9, '10': 'result'},
+    {'1': 'error', '3': 5, '4': 1, '5': 9, '10': 'error'},
   ],
 };
 
-/// Descriptor for `PingResult`. Decode as a `google.protobuf.DescriptorProto`.
-final $typed_data.Uint8List pingResultDescriptor = $convert.base64Decode(
-    'CgpQaW5nUmVzdWx0EhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZBIeCgpzZXJ2ZXJUaW1lGA'
-    'IgASgDUgpzZXJ2ZXJUaW1l');
+/// Descriptor for `CallResult`. Decode as a `google.protobuf.DescriptorProto`.
+final $typed_data.Uint8List callResultDescriptor = $convert.base64Decode(
+    'CgpDYWxsUmVzdWx0EhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZBIQCgNjaWQYAiABKAlSA2'
+    'NpZBISCgRuYW1lGAMgASgJUgRuYW1lEhYKBnJlc3VsdBgEIAEoCVIGcmVzdWx0EhQKBWVycm9y'
+    'GAUgASgJUgVlcnJvcg==');
 
