@@ -7,6 +7,7 @@ import 'package:fixnum/fixnum.dart';
 import 'package:flame_network/flame_network.dart';
 import 'package:flame_network/src/common/common.dart';
 import 'package:flame_network/src/network/grpc/server.pbgrpc.dart';
+import 'package:flutter/foundation.dart';
 import 'package:grpc/grpc.dart';
 import 'package:grpc/grpc_connection_interface.dart';
 import 'package:http2/transport.dart';
@@ -479,7 +480,7 @@ class NetworkManagerGRPC extends NetworkManager {
 
   bool running = false;
   //
-  bool grpcOn = true;
+  bool grpcOn = !kIsWeb;
   bool webOn = true;
   Uri grpcAddress = Uri(scheme: "grpc", host: "127.0.0.1", port: 50051);
   Uri webAddress = Uri(scheme: "ws", host: "127.0.0.1", port: 50052);
