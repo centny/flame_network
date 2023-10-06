@@ -231,6 +231,8 @@ mixin NetworkComponent {
   String get nCID;
   bool get nRemoved;
   bool get nUpdated => _updated;
+  bool get isServer => NetworkManager.global.isServer;
+  bool get isClient => NetworkManager.global.isClient;
 
   //--------------------------//
   //------ NetworkComponent -------//

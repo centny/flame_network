@@ -122,6 +122,10 @@ void main() {
     var m = TestNetworkManager();
     assert(NetworkManager.global == m);
     assert(m.standalone);
+
+    var nc = TestNetworkComponent();
+    assert(nc.isServer);
+    assert(nc.isClient);
   });
   test('NetworkComponent.create', () async {
     NetworkComponent.onAdd = (p0) => L.i("add ->${p0.nCID}");
