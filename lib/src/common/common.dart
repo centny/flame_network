@@ -30,3 +30,13 @@ class HandleableStream<T> with Stream<T> {
     );
   }
 }
+
+List<int> asListInt(dynamic v) {
+  if (v is List<int>) {
+    return v;
+  }
+  if (v is String) {
+    return v.codeUnits;
+  }
+  throw Exception("not supported type ${v.runtimeType}");
+}

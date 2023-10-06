@@ -64,8 +64,6 @@ mixin NetworkTransport {
   bool isClient = false;
   bool get standalone => isServer && isClient;
   set standalone(bool v) => isServer = isClient = v;
-  String host = "127.0.0.1";
-  int port = 50051;
   Future<void> networkSync(NetworkSyncData data);
   Future<NetworkCallResult> networkCall(NetworkCallArg arg);
 }

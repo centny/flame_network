@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flame_network/src/common/log.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flame_network/flame_network.dart';
 import 'package:grpc/grpc.dart';
@@ -35,7 +36,7 @@ class TestNetworkCallback with NetworkCallback {
 
   @override
   void onNetworkState(NetworkConnection conn, NetworkState state, {Object? info}) {
-    L.i("[Test] connection to $state,server:${conn.isServer},client:${conn.isClient}");
+    L.i("[Test] connection to $state,server:${conn.isServer},client:${conn.isClient},info:$info");
     if (conn.isServer) {
       _connWaiter.add("$state");
     }
@@ -88,6 +89,27 @@ void main() {
     var received = await callback.waitData();
     L.i("data is $received");
     await NetworkManagerGRPC.shared.stop();
+  });
+  test('NetworkGRPC.web', () async {
+    var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.isServer = true;
+    NetworkManagerGRPC.shared.isClient = true;
+    NetworkManagerGRPC.shared.callback = callback;
+    NetworkManagerGRPC.shared.grpcOn = false;
+    await NetworkManagerGRPC.shared.start();
+    var connected = await callback.waitConn();
+    L.i("conn is $connected");
+    NetworkManagerGRPC.shared.networkSync(NetworkSyncData.create(components: [
+      NetworkSyncDataComponent(
+        nFactory: "type",
+        nCID: "uuid",
+        nRemoved: false,
+      )
+    ]));
+    var received = await callback.waitData();
+    L.i("data is $received");
+    await NetworkManagerGRPC.shared.stop();
+    NetworkManagerGRPC.shared.grpcOn = !kIsWeb;
   });
   test('NetworkGRPC.call', () async {
     var callback = TestNetworkCallback();
@@ -161,6 +183,11 @@ void main() {
     try {
       await NetworkManagerGRPC.shared.networkCall(NetworkCallArg(uuid: "123", nCID: "123", nName: "error", nArg: "abc"));
       assert(false);
+    } catch (_) {}
+    try {
+      NetworkManagerGRPC.shared.grpcOn = false;
+      NetworkManagerGRPC.shared.webOn = false;
+      await NetworkManagerGRPC.shared.reconnect();
     } catch (_) {}
     var client = NetworkManagerGRPC.shared.client;
     var connections = NetworkManagerGRPC.shared.server?.connections ?? [];

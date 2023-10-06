@@ -8,8 +8,10 @@ import 'package:flame_network/flame_network.dart';
 import 'package:flame_network/src/common/common.dart';
 import 'package:flame_network/src/network/grpc/server.pbgrpc.dart';
 import 'package:grpc/grpc.dart';
+import 'package:grpc/grpc_connection_interface.dart';
 import 'package:http2/transport.dart';
 import 'package:uuid/uuid.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../common/log.dart';
 
@@ -217,6 +219,14 @@ class NetworkServerGRPC extends ServerServiceBase {
     return syncStream.stream;
   }
 
+  // @override
+  // Stream<SyncData> remoteSync(ServiceCall call, SyncArg request) async* {
+  //   while (true) {
+  //     await Future.delayed(const Duration(milliseconds: 100));
+  //     yield SyncData();
+  //   }
+  // }
+
   @override
   Future<CallResult> remoteCall(ServiceCall call, CallArg request) async {
     var session = NetworkSession.from(call.clientMetadata ?? {});
@@ -243,7 +253,7 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
   @override
   bool get isServer => false;
 
-  NetworkClientGRPC(ClientChannel channel, this.callback) : super(channel) {
+  NetworkClientGRPC(ClientChannelBase channel, this.callback) : super(channel) {
     channel.onConnectionStateChanged.listen(onConnectionStateChanged);
   }
 
@@ -290,7 +300,11 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
   void startMonitorSync() async {
     var request = SyncArg(id: newRequestID());
     _syncMonitor = super.remoteSync(request, options: CallOptions(metadata: session?.value));
-    _syncMonitor?.listen((value) async => await onNetworkSync(this, value.wrap())).onError((e) => callback.onNetworkState(this, NetworkState.error, info: e));
+    _syncMonitor?.listen(
+      (data) => onNetworkSync(this, data.wrap()),
+      onError: (e) => callback.onNetworkState(this, NetworkState.error, info: e),
+      cancelOnError: true,
+    );
   }
 
   Future<void> stopMonitorSync() async {
@@ -339,8 +353,30 @@ class HandledServerConnectionGRPC implements ServerTransportConnection {
   Stream<ServerTransportStream> get incomingStreams => HandleableStream(stream: conn.incomingStreams, onError: onError, onDone: onDone);
 }
 
+class HandledWrapperStreamSink implements StreamSink<List<int>> {
+  StreamSink<dynamic> base;
+
+  HandledWrapperStreamSink(this.base);
+
+  @override
+  void add(List<int> event) => base.add(String.fromCharCodes(event));
+
+  @override
+  void addError(Object error, [StackTrace? stackTrace]) => base.addError(error, stackTrace);
+
+  @override
+  Future addStream(Stream<List<int>> stream) => base.addStream(stream.map((event) => String.fromCharCodes(event)));
+
+  @override
+  Future close() => base.close();
+
+  @override
+  Future get done => base.done;
+}
+
 class HandledServerGRPC extends Server {
   final _connections = <ServerTransportConnection>[];
+  HttpServer? _webServer;
 
   HandledServerGRPC.create({required super.services, super.keepAliveOptions, super.interceptors, super.codecRegistry, super.errorHandler}) : super.create();
 
@@ -363,13 +399,74 @@ class HandledServerGRPC extends Server {
     return super.serveConnection(connection: handled, clientCertificate: clientCertificate, remoteAddress: remoteAddress);
   }
 
+  Future<void> web({
+    dynamic address,
+    int? port,
+    ServerCredentials? security,
+    ServerSettings? http2ServerSettings,
+  }) async {
+    final securityContext = security?.securityContext;
+    if (securityContext != null) {
+      _webServer = await HttpServer.bindSecure(address, port ?? 443, securityContext);
+    } else {
+      _webServer = await HttpServer.bind(address, port ?? 80);
+    }
+    _webServer!.listen((request) async {
+      L.i("[WEB] receive request ${request.uri} from ${request.connectionInfo?.remoteAddress.address}:${request.connectionInfo?.remotePort}");
+      request.response.headers.contentType = ContentType.binary;
+      var socket = await WebSocketTransformer.upgrade(
+        request,
+        protocolSelector: (protocols) => "grpc",
+      );
+      var stream = socket.map((event) => asListInt(event));
+      var sink = HandledWrapperStreamSink(socket);
+      final connection = ServerTransportConnection.viaStreams(stream, sink, settings: http2ServerSettings);
+      await serveConnection(
+        connection: connection,
+        clientCertificate: request.certificate,
+        remoteAddress: request.connectionInfo?.remoteAddress,
+      );
+    }, onError: (error, stackTrace) {
+      if (error is Error) {
+        Zone.current.handleUncaughtError(error, stackTrace);
+      }
+    }, cancelOnError: true);
+  }
+
   @override
   Future<void> shutdown() async {
     for (var conn in _connections.toList()) {
       await conn.terminate();
     }
     await super.shutdown();
+    await _webServer?.close(force: true);
   }
+}
+
+class WebSocketChannelConnector extends ClientTransportConnector {
+  Uri address;
+  ClientSettings? settings;
+  late WebSocketChannel channel;
+
+  WebSocketChannelConnector(this.address, {this.settings}) {
+    channel = WebSocketChannel.connect(address, protocols: ["grpc"]);
+  }
+
+  @override
+  String get authority => "";
+
+  @override
+  Future<ClientTransportConnection> connect() async {
+    var stream = channel.stream.map((event) => asListInt(event));
+    var sink = HandledWrapperStreamSink(channel.sink);
+    return ClientTransportConnection.viaStreams(stream, sink, settings: settings);
+  }
+
+  @override
+  Future get done => channel.sink.done;
+
+  @override
+  void shutdown() => channel.sink.close();
 }
 
 class NetworkManagerGRPC extends NetworkManager {
@@ -381,9 +478,15 @@ class NetworkManagerGRPC extends NetworkManager {
   }
 
   bool running = false;
-  ChannelCredentials credentials = const ChannelCredentials.insecure();
+  //
+  bool grpcOn = true;
+  bool webOn = true;
+  Uri grpcAddress = Uri(scheme: "grpc", host: "127.0.0.1", port: 50051);
+  Uri webAddress = Uri(scheme: "ws", host: "127.0.0.1", port: 50052);
   ServerCredentials? security;
-  ClientChannel? channel;
+  //
+  ChannelCredentials credentials = const ChannelCredentials.insecure();
+  ClientChannelBase? channel;
   Timer? timer;
   HandledServerGRPC? server;
   NetworkServerGRPC? service;
@@ -416,36 +519,40 @@ class NetworkManagerGRPC extends NetworkManager {
   }
 
   Future<void> _listen() async {
-    L.i("[GRPC] start server on $host:$port");
     service = NetworkServerGRPC(callback);
     server = HandledServerGRPC.create(
       services: [service!],
-      codecRegistry: CodecRegistry(codecs: const [GzipCodec(), IdentityCodec()]),
       errorHandler: onErrorHandler,
     );
-    await server?.serve(address: host, port: port, security: security);
+    if (grpcOn) {
+      L.i("[GRPC] start grpc server on $grpcAddress");
+      await server?.serve(address: grpcAddress.host, port: grpcAddress.port, security: security);
+    }
+    if (webOn) {
+      L.i("[GRPC] start web server on $webAddress");
+      await server?.web(address: webAddress.host, port: webAddress.port, security: security);
+    }
     timer = Timer.periodic(const Duration(seconds: 1), (t) => ticker());
   }
 
-  Future<void> _reconnect() async {
+  Future<void> reconnect() async {
     if (!running) {
       return;
     }
-    L.i("[GRPC] start connect to $host:$port");
-    channel = ClientChannel(
-      host,
-      port: port,
-      options: ChannelOptions(
-        credentials: credentials,
-        codecRegistry: CodecRegistry(codecs: const [GzipCodec(), IdentityCodec()]),
-        connectTimeout: timeout,
-      ),
-      channelShutdownHandler: () {
-        if (running) {
-          _reconnect();
-        }
-      },
-    );
+    if (grpcOn) {
+      L.i("[GRPC] start connect to $grpcAddress");
+      channel = ClientChannel(
+        grpcAddress.host,
+        port: grpcAddress.port,
+        options: ChannelOptions(credentials: credentials, connectTimeout: timeout),
+      );
+    } else if (webOn) {
+      var connector = WebSocketChannelConnector(webAddress, settings: const ClientSettings(allowServerPushes: true));
+      channel = ClientTransportConnectorChannel(connector);
+    } else {
+      L.e("grpc/web at least one must be configured");
+      throw Exception("not configured");
+    }
     client = NetworkClientGRPC(channel!, callback);
     client?.session = session;
     client?.startMonitorSync();
@@ -455,24 +562,25 @@ class NetworkManagerGRPC extends NetworkManager {
     try {
       await client!.ping(keepalive);
     } catch (e) {
-      L.w("[GRPC] ping to $host:$port fail with $e");
+      L.w("[GRPC] ping to $channel fail with $e");
       try {
         await client?.stopMonitorSync();
         await channel?.shutdown();
       } catch (_) {}
       try {
-        _reconnect();
+        reconnect();
       } catch (_) {}
     }
   }
 
   Future<void> start() async {
+    L.i("[GRPC] network start by server:$isServer,client:$isClient");
     running = true;
     if (isServer && server == null) {
       await _listen();
     }
     if (isClient && channel == null) {
-      await _reconnect();
+      await reconnect();
     }
   }
 
