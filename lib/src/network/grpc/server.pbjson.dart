@@ -55,7 +55,7 @@ final $typed_data.Uint8List pingResultDescriptor = $convert.base64Decode(
 const SyncDataComponent$json = {
   '1': 'SyncDataComponent',
   '2': [
-    {'1': 'factory', '3': 1, '4': 1, '5': 9, '10': 'factory'},
+    {'1': 'factoryType', '3': 1, '4': 1, '5': 9, '10': 'factoryType'},
     {'1': 'cid', '3': 2, '4': 1, '5': 9, '10': 'cid'},
     {'1': 'removed', '3': 3, '4': 1, '5': 8, '10': 'removed'},
     {'1': 'props', '3': 4, '4': 1, '5': 9, '10': 'props'},
@@ -64,8 +64,9 @@ const SyncDataComponent$json = {
 
 /// Descriptor for `SyncDataComponent`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List syncDataComponentDescriptor = $convert.base64Decode(
-    'ChFTeW5jRGF0YUNvbXBvbmVudBIYCgdmYWN0b3J5GAEgASgJUgdmYWN0b3J5EhAKA2NpZBgCIA'
-    'EoCVIDY2lkEhgKB3JlbW92ZWQYAyABKAhSB3JlbW92ZWQSFAoFcHJvcHMYBCABKAlSBXByb3Bz');
+    'ChFTeW5jRGF0YUNvbXBvbmVudBIgCgtmYWN0b3J5VHlwZRgBIAEoCVILZmFjdG9yeVR5cGUSEA'
+    'oDY2lkGAIgASgJUgNjaWQSGAoHcmVtb3ZlZBgDIAEoCFIHcmVtb3ZlZBIUCgVwcm9wcxgEIAEo'
+    'CVIFcHJvcHM=');
 
 @$core.Deprecated('Use syncArgDescriptor instead')
 const SyncArg$json = {

@@ -10,7 +10,7 @@ message PingResult {
 }
 
 message SyncDataComponent {
-  string factory = 1;
+  string factoryType = 1;
   string cid = 2;
   bool removed = 3;
   string props = 4;

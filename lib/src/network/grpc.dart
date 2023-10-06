@@ -20,7 +20,7 @@ RequestID newRequestID() => RequestID(uuid: const Uuid().v1());
 extension on NetworkSyncDataComponent {
   SyncDataComponent wrap() {
     return SyncDataComponent(
-      factory: nFactory,
+      factoryType: nFactory,
       cid: nCID,
       removed: nRemoved,
       props: jsonEncode(nProps),
@@ -31,7 +31,7 @@ extension on NetworkSyncDataComponent {
 extension on SyncDataComponent {
   NetworkSyncDataComponent wrap() {
     return NetworkSyncDataComponent(
-      nFactory: factory,
+      nFactory: factoryType,
       nCID: cid,
       nRemoved: removed,
       nProps: jsonDecode(props),

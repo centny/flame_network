@@ -184,14 +184,14 @@ class PingResult extends $pb.GeneratedMessage {
 
 class SyncDataComponent extends $pb.GeneratedMessage {
   factory SyncDataComponent({
-    $core.String? factory,
+    $core.String? factoryType,
     $core.String? cid,
     $core.bool? removed,
     $core.String? props,
   }) {
     final $result = create();
-    if (factory != null) {
-      $result.factory = factory;
+    if (factoryType != null) {
+      $result.factoryType = factoryType;
     }
     if (cid != null) {
       $result.cid = cid;
@@ -209,7 +209,7 @@ class SyncDataComponent extends $pb.GeneratedMessage {
   factory SyncDataComponent.fromJson($core.String i, [$pb.ExtensionRegistry r = $pb.ExtensionRegistry.EMPTY]) => create()..mergeFromJson(i, r);
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SyncDataComponent', createEmptyInstance: create)
-    ..aOS(1, _omitFieldNames ? '' : 'factory')
+    ..aOS(1, _omitFieldNames ? '' : 'factoryType', protoName: 'factoryType')
     ..aOS(2, _omitFieldNames ? '' : 'cid')
     ..aOB(3, _omitFieldNames ? '' : 'removed')
     ..aOS(4, _omitFieldNames ? '' : 'props')
@@ -238,13 +238,13 @@ class SyncDataComponent extends $pb.GeneratedMessage {
   static SyncDataComponent? _defaultInstance;
 
   @$pb.TagNumber(1)
-  $core.String get factory => $_getSZ(0);
+  $core.String get factoryType => $_getSZ(0);
   @$pb.TagNumber(1)
-  set factory($core.String v) { $_setString(0, v); }
+  set factoryType($core.String v) { $_setString(0, v); }
   @$pb.TagNumber(1)
-  $core.bool hasFactory() => $_has(0);
+  $core.bool hasFactoryType() => $_has(0);
   @$pb.TagNumber(1)
-  void clearFactory() => clearField(1);
+  void clearFactoryType() => clearField(1);
 
   @$pb.TagNumber(2)
   $core.String get cid => $_getSZ(1);
