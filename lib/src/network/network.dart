@@ -68,7 +68,7 @@ mixin NetworkTransport {
   Future<NetworkCallResult> networkCall(NetworkCallArg arg);
 }
 
-abstract class NetworkManager with NetworkTransport {
+abstract class NetworkManager with NetworkTransport, NetworkCallback {
   static NetworkManager? _global;
 
   static NetworkManager get global {
@@ -80,6 +80,7 @@ abstract class NetworkManager with NetworkTransport {
 
   NetworkManager() {
     _global = this;
+    callback = this;
   }
 }
 
@@ -191,7 +192,7 @@ class NetworkPropList<T> extends NetworkProp<List<T>> {
   void decode(v) => value = (jsonDecode(v) as List<dynamic>).map((e) => e as T).toList();
 }
 
-typedef NetworkComponentFactory = NetworkComponent Function(String group, String id);
+typedef NetworkComponentFactory = NetworkComponent Function(String key, String group, String id);
 
 mixin NetworkComponent {
   static final Map<String, NetworkComponentFactory> _factoryAll = {};
@@ -212,7 +213,13 @@ mixin NetworkComponent {
 
   static void registerFactory(String key, NetworkComponentFactory creator) => _factoryAll[key] = creator;
 
-  static NetworkComponent createComponent(String key, String group) => _factoryAll[key]!(group, const Uuid().v1());
+  static NetworkComponent createComponent(String key, String group) {
+    var creator = _factoryAll[key] ?? _factoryAll["$group-*"] ?? _factoryAll["*"];
+    if (creator == null) {
+      throw Exception("NetworkComponentFactory by $key is not supported");
+    }
+    return creator(key, group, const Uuid().v1());
+  }
 
   static void Function(NetworkComponent)? onAdd;
   static void Function(NetworkComponent)? onRemove;

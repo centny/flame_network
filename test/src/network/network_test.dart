@@ -178,7 +178,7 @@ void main() {
     nc2.unregister();
   });
   test('NetworkComponent.factory', () async {
-    NetworkComponent.registerFactory("test", (group, id) => TestNetworkComponent());
+    NetworkComponent.registerFactory("test", (key, group, id) => TestNetworkComponent());
     assert(NetworkComponent.findComponent("123") == null);
     var cs1 = [NetworkSyncDataComponent(nFactory: "test", nCID: "123")];
     NetworkComponent.syncRecv("*", cs1);
@@ -187,6 +187,11 @@ void main() {
     var cs2 = [NetworkSyncDataComponent(nFactory: "test", nCID: "123", nRemoved: true)];
     NetworkComponent.syncRecv("*", cs2);
     assert(NetworkComponent.findComponent("123") == null);
+
+    try {
+      NetworkComponent.createComponent("none", "*");
+      assert(false);
+    } catch (_) {}
   });
   test('NetworkComponent.call', () async {
     var _ = TestNetworkManager();
