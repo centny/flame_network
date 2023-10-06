@@ -10,6 +10,7 @@ class TestNetworkCallback with NetworkCallback {
   final StreamController<String> _dataWaiter = StreamController<String>();
   late StreamIterator<String> connWaiter;
   late StreamIterator<String> dataWaiter;
+  bool syncError = false;
 
   TestNetworkCallback() {
     connWaiter = StreamIterator(_connWaiter.stream);
@@ -42,6 +43,9 @@ class TestNetworkCallback with NetworkCallback {
 
   @override
   Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async {
+    if (syncError) {
+      throw Exception("test error");
+    }
     L.i("[Test] sync data $data");
     _dataWaiter.add(data.uuid);
   }
@@ -57,7 +61,13 @@ class TestNetworkCallback with NetworkCallback {
   }
 }
 
-class TestNetworkCall {}
+class TestNetworkConnection with NetworkConnection {
+  @override
+  bool get isClient => throw UnimplementedError();
+
+  @override
+  bool get isServer => throw UnimplementedError();
+}
 
 void main() {
   test('NetworkGRPC.sync', () async {
@@ -142,6 +152,7 @@ void main() {
   });
   test('NetworkGRPC.cover', () async {
     var callback = TestNetworkCallback();
+    var conn = TestNetworkConnection();
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
@@ -170,6 +181,9 @@ void main() {
     }
     client?.onConnectionStateChanged(ConnectionState.transientFailure);
     NetworkManagerGRPC.shared.onErrorHandler(const GrpcError.aborted(), null);
+    callback.syncError = true;
+    await client?.onNetworkSync(conn, NetworkSyncData(uuid: "uuid", group: "group", components: List.empty()));
+    NetworkManagerGRPC.shared.onNetworkState(conn, NetworkState.closed);
 
     //
     NetworkManagerGRPC.shared.isClient = false;

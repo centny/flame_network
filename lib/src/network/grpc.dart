@@ -279,10 +279,18 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
     return DateTime.fromMillisecondsSinceEpoch(result.serverTime.toInt());
   }
 
+  Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async {
+    try {
+      await callback.onNetworkSync(conn, data);
+    } catch (e, s) {
+      L.e("[GRPC] network sync fail with $e\n$s");
+    }
+  }
+
   void startMonitorSync() async {
     var request = SyncArg(id: newRequestID());
-    _syncMonitor = super.remoteSync(request, options: callOptions);
-    _syncMonitor?.listen((value) async => await callback.onNetworkSync(this, value.wrap())).onError((e) => callback.onNetworkState(this, NetworkState.error, info: e));
+    _syncMonitor = super.remoteSync(request, options: CallOptions(metadata: session?.value));
+    _syncMonitor?.listen((value) async => await onNetworkSync(this, value.wrap())).onError((e) => callback.onNetworkState(this, NetworkState.error, info: e));
   }
 
   Future<void> stopMonitorSync() async {
@@ -382,6 +390,13 @@ class NetworkManagerGRPC extends NetworkManager {
   NetworkClientGRPC? client;
 
   NetworkManagerGRPC();
+
+  @override
+  void onNetworkState(NetworkConnection conn, NetworkState state, {Object? info}) {
+    if (isClient) {
+      L.i("[GRPC] connection status to $state, info is $info");
+    }
+  }
 
   void onErrorHandler(GrpcError error, StackTrace? trace) {
     L.e("[GRPC] server handler error $error\n$trace");
