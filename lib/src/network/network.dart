@@ -299,6 +299,9 @@ mixin NetworkComponent {
     prop.getter = getter;
     prop.setter = setter;
     prop.onChanged = (v) => _updated = true;
+    if (setter != null) {
+      setter(prop.value);
+    }
     _props[prop.name] = prop;
     _addComponent(this);
   }
