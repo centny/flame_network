@@ -365,9 +365,12 @@ class HandledServerGRPC extends Server {
 }
 
 class NetworkManagerGRPC extends NetworkManager {
-  static final NetworkManagerGRPC _instance = NetworkManagerGRPC._();
+  static NetworkManagerGRPC? _instance;
 
-  static NetworkManagerGRPC get shared => _instance;
+  static NetworkManagerGRPC get shared {
+    _instance ??= NetworkManagerGRPC();
+    return _instance!;
+  }
 
   bool running = false;
   ChannelCredentials credentials = const ChannelCredentials.insecure();
@@ -378,7 +381,7 @@ class NetworkManagerGRPC extends NetworkManager {
   NetworkServerGRPC? service;
   NetworkClientGRPC? client;
 
-  NetworkManagerGRPC._();
+  NetworkManagerGRPC();
 
   void onErrorHandler(GrpcError error, StackTrace? trace) {
     L.e("[GRPC] server handler error $error\n$trace");
