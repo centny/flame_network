@@ -87,6 +87,11 @@ class TestNetworkConnection with NetworkConnection {
 class TestNetworkManager extends NetworkManager with NetworkCallback {
   TestNetworkConnection conn = TestNetworkConnection();
 
+  TestNetworkManager() {
+    isServer = true;
+    isClient = true;
+  }
+
   @override
   Future<NetworkCallResult> networkCall(NetworkCallArg arg) {
     return onNetworkCall(conn, arg);
@@ -144,7 +149,6 @@ void main() {
     nc.unregister();
   });
   test('NetworkComponent.sync', () async {
-    var conn = TestNetworkConnection();
     var cb = TestNetworkManager();
     var nc = TestNetworkComponent();
 
@@ -154,8 +158,7 @@ void main() {
     assert(cs2.isEmpty);
     NetworkComponent.syncRecv("*", cs1);
 
-    var data = NetworkSyncData.syncSend("*");
-    cb.onNetworkSync(conn, data);
+    cb.sync("*");
 
     nc.unregister();
   });

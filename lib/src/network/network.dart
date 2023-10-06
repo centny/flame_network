@@ -82,6 +82,18 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
     _global = this;
     callback = this;
   }
+
+  Future<bool> sync(String group) async {
+    var updated = false;
+    if (isServer) {
+      var data = NetworkSyncData.syncSend(group);
+      if (data.isUpdated) {
+        networkSync(data);
+        updated = true;
+      }
+    }
+    return updated;
+  }
 }
 
 class NetworkCallArg {
@@ -116,6 +128,8 @@ class NetworkSyncData {
   String group = "*";
 
   List<NetworkSyncDataComponent> components;
+
+  bool get isUpdated => components.isNotEmpty;
 
   NetworkSyncData({required this.uuid, required this.group, required this.components});
 
