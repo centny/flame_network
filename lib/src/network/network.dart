@@ -80,18 +80,26 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
     return _global!;
   }
 
+  Duration minSync = const Duration(milliseconds: 50);
+  DateTime _lastSync = DateTime.fromMillisecondsSinceEpoch(0);
+
   NetworkManager() {
     _global = this;
     callback = this;
   }
 
   Future<bool> sync(String group) async {
+    var now = DateTime.now();
+    if (now.difference(_lastSync) < minSync) {
+      return false;
+    }
     var updated = false;
     if (isServer) {
       var data = NetworkSyncData.syncSend(group);
       if (data.isUpdated) {
         networkSync(data);
         updated = true;
+        _lastSync = now;
       }
     }
     return updated;
