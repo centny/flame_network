@@ -88,8 +88,7 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
   TestNetworkConnection conn = TestNetworkConnection();
 
   TestNetworkManager() {
-    isServer = true;
-    isClient = true;
+    standalone = true;
   }
 
   @override
@@ -120,6 +119,9 @@ void main() {
       var _ = NetworkManager.global;
       assert(false);
     } catch (_) {}
+    var m = TestNetworkManager();
+    assert(NetworkManager.global == m);
+    assert(m.standalone);
   });
   test('NetworkComponent.create', () async {
     NetworkComponent.onAdd = (p0) => L.i("add ->${p0.nCID}");
