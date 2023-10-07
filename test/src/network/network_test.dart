@@ -60,13 +60,13 @@ class TestNetworkComponent with NetworkComponent {
     clearNetworkCall();
   }
 
-  Future<void> updateInt(String uuid, int v) async {
-    L.i("call $uuid set sInt=>$v");
+  Future<void> updateInt(NetworkSession? ctx, String uuid, int v) async {
+    L.i("${ctx?.user} call $uuid set sInt=>$v");
     sInt.value = v;
   }
 
-  Future<String> parseInt(String uuid, int v) async {
-    L.i("call $uuid parse int=>$v");
+  Future<String> parseInt(NetworkSession? ctx, String uuid, int v) async {
+    L.i("${ctx?.user} call $uuid parse int=>$v");
     return "$v";
   }
 
@@ -89,6 +89,7 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
 
   TestNetworkManager() {
     standalone = true;
+    conn.session = session;
   }
 
   @override
@@ -204,7 +205,8 @@ void main() {
     } catch (_) {}
   });
   test('NetworkComponent.call', () async {
-    var _ = TestNetworkManager();
+    var m = TestNetworkManager();
+    m.session.user = "u123";
     var nc = TestNetworkComponent();
 
     await nc.networkCall(nc.cUpdate, 100);
@@ -215,11 +217,11 @@ void main() {
 
     //cover
     try {
-      await NetworkComponent.callNetworkCall(NetworkCallArg(uuid: const Uuid().v1(), nCID: "none", nName: nc.cUpdate.name, nArg: "100"));
+      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: "none", nName: nc.cUpdate.name, nArg: "100"));
       assert(false); //not reach
     } catch (_) {}
     try {
-      await NetworkComponent.callNetworkCall(NetworkCallArg(uuid: const Uuid().v1(), nCID: nc.nCID, nName: "none", nArg: "100"));
+      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: nc.nCID, nName: "none", nArg: "100"));
       assert(false); //not reach
     } catch (_) {}
 

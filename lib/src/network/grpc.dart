@@ -23,6 +23,7 @@ extension on NetworkSyncDataComponent {
     return SyncDataComponent(
       factoryType: nFactory,
       cid: nCID,
+      owner: nOwner,
       removed: nRemoved,
       props: jsonEncode(nProps),
     );
@@ -34,6 +35,7 @@ extension on SyncDataComponent {
     return NetworkSyncDataComponent(
       nFactory: factoryType,
       nCID: cid,
+      nOwner: owner,
       nRemoved: removed,
       nProps: jsonDecode(props),
     );

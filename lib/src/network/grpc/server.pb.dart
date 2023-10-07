@@ -186,6 +186,7 @@ class SyncDataComponent extends $pb.GeneratedMessage {
   factory SyncDataComponent({
     $core.String? factoryType,
     $core.String? cid,
+    $core.String? owner,
     $core.bool? removed,
     $core.String? props,
   }) {
@@ -195,6 +196,9 @@ class SyncDataComponent extends $pb.GeneratedMessage {
     }
     if (cid != null) {
       $result.cid = cid;
+    }
+    if (owner != null) {
+      $result.owner = owner;
     }
     if (removed != null) {
       $result.removed = removed;
@@ -211,8 +215,9 @@ class SyncDataComponent extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SyncDataComponent', createEmptyInstance: create)
     ..aOS(1, _omitFieldNames ? '' : 'factoryType', protoName: 'factoryType')
     ..aOS(2, _omitFieldNames ? '' : 'cid')
-    ..aOB(3, _omitFieldNames ? '' : 'removed')
-    ..aOS(4, _omitFieldNames ? '' : 'props')
+    ..aOS(3, _omitFieldNames ? '' : 'owner')
+    ..aOB(4, _omitFieldNames ? '' : 'removed')
+    ..aOS(5, _omitFieldNames ? '' : 'props')
     ..hasRequiredFields = false
   ;
 
@@ -256,22 +261,31 @@ class SyncDataComponent extends $pb.GeneratedMessage {
   void clearCid() => clearField(2);
 
   @$pb.TagNumber(3)
-  $core.bool get removed => $_getBF(2);
+  $core.String get owner => $_getSZ(2);
   @$pb.TagNumber(3)
-  set removed($core.bool v) { $_setBool(2, v); }
+  set owner($core.String v) { $_setString(2, v); }
   @$pb.TagNumber(3)
-  $core.bool hasRemoved() => $_has(2);
+  $core.bool hasOwner() => $_has(2);
   @$pb.TagNumber(3)
-  void clearRemoved() => clearField(3);
+  void clearOwner() => clearField(3);
 
   @$pb.TagNumber(4)
-  $core.String get props => $_getSZ(3);
+  $core.bool get removed => $_getBF(3);
   @$pb.TagNumber(4)
-  set props($core.String v) { $_setString(3, v); }
+  set removed($core.bool v) { $_setBool(3, v); }
   @$pb.TagNumber(4)
-  $core.bool hasProps() => $_has(3);
+  $core.bool hasRemoved() => $_has(3);
   @$pb.TagNumber(4)
-  void clearProps() => clearField(4);
+  void clearRemoved() => clearField(4);
+
+  @$pb.TagNumber(5)
+  $core.String get props => $_getSZ(4);
+  @$pb.TagNumber(5)
+  set props($core.String v) { $_setString(4, v); }
+  @$pb.TagNumber(5)
+  $core.bool hasProps() => $_has(4);
+  @$pb.TagNumber(5)
+  void clearProps() => clearField(5);
 }
 
 class SyncArg extends $pb.GeneratedMessage {

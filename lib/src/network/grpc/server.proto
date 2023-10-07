@@ -12,8 +12,9 @@ message PingResult {
 message SyncDataComponent {
   string factoryType = 1;
   string cid = 2;
-  bool removed = 3;
-  string props = 4;
+  string owner = 3;
+  bool removed = 4;
+  string props = 5;
 }
 
 message SyncArg { RequestID id = 1; }

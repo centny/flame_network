@@ -57,16 +57,17 @@ const SyncDataComponent$json = {
   '2': [
     {'1': 'factoryType', '3': 1, '4': 1, '5': 9, '10': 'factoryType'},
     {'1': 'cid', '3': 2, '4': 1, '5': 9, '10': 'cid'},
-    {'1': 'removed', '3': 3, '4': 1, '5': 8, '10': 'removed'},
-    {'1': 'props', '3': 4, '4': 1, '5': 9, '10': 'props'},
+    {'1': 'owner', '3': 3, '4': 1, '5': 9, '10': 'owner'},
+    {'1': 'removed', '3': 4, '4': 1, '5': 8, '10': 'removed'},
+    {'1': 'props', '3': 5, '4': 1, '5': 9, '10': 'props'},
   ],
 };
 
 /// Descriptor for `SyncDataComponent`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List syncDataComponentDescriptor = $convert.base64Decode(
     'ChFTeW5jRGF0YUNvbXBvbmVudBIgCgtmYWN0b3J5VHlwZRgBIAEoCVILZmFjdG9yeVR5cGUSEA'
-    'oDY2lkGAIgASgJUgNjaWQSGAoHcmVtb3ZlZBgDIAEoCFIHcmVtb3ZlZBIUCgVwcm9wcxgEIAEo'
-    'CVIFcHJvcHM=');
+    'oDY2lkGAIgASgJUgNjaWQSFAoFb3duZXIYAyABKAlSBW93bmVyEhgKB3JlbW92ZWQYBCABKAhS'
+    'B3JlbW92ZWQSFAoFcHJvcHMYBSABKAlSBXByb3Bz');
 
 @$core.Deprecated('Use syncArgDescriptor instead')
 const SyncArg$json = {

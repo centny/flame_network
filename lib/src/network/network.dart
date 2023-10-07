@@ -17,6 +17,9 @@ class NetworkSession {
   String get group => value["group"] ?? "";
   set group(String v) => value["group"] = v;
 
+  String get user => value["user"] ?? "";
+  set user(String v) => value["user"] = v;
+
   NetworkSession(this.value);
 
   factory NetworkSession.create() => NetworkSession({});
@@ -51,7 +54,7 @@ enum NetworkState {
 
 mixin NetworkCallback {
   void onNetworkState(NetworkConnection conn, NetworkState state, {Object? info}) {}
-  Future<NetworkCallResult> onNetworkCall(NetworkConnection conn, NetworkCallArg arg) async => NetworkComponent.callNetworkCall(arg);
+  Future<NetworkCallResult> onNetworkCall(NetworkConnection conn, NetworkCallArg arg) async => NetworkComponent.callNetworkCall(conn.session, arg);
   Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async => NetworkComponent.syncRecv(data.group, data.components);
 }
 
@@ -80,6 +83,8 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
 
   Duration minSync = const Duration(milliseconds: 30);
   DateTime _lastSync = DateTime.fromMillisecondsSinceEpoch(0);
+
+  String? get user => session.user;
 
   NetworkManager() {
     _global = this;
@@ -125,10 +130,11 @@ class NetworkCallResult {
 class NetworkSyncDataComponent {
   String nFactory;
   String nCID;
+  String? nOwner;
   bool? nRemoved;
   Map<String, dynamic>? nProps = {};
 
-  NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nRemoved, this.nProps});
+  NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nOwner, this.nRemoved, this.nProps});
 }
 
 class NetworkSyncData {
@@ -146,16 +152,16 @@ class NetworkSyncData {
   factory NetworkSyncData.syncSend(group) => NetworkSyncData(uuid: const Uuid().v1(), group: group, components: NetworkComponent.syncSend(group));
 }
 
-typedef NetworkCallFunction<R, S> = Future<R> Function(String uuid, S);
+typedef NetworkCallFunction<R, S> = Future<R> Function(NetworkSession? ctx, String uuid, S);
 
 class NetworkCall<R, S> {
   String name;
   NetworkCallFunction<R, S>? exec;
   NetworkCall(this.name, {this.exec});
 
-  Future<String> run(String uuid, String arg) async {
+  Future<String> run(NetworkSession? ctx, String uuid, String arg) async {
     var a = decode(arg);
-    var r = await exec!(uuid, a);
+    var r = await exec!(ctx, uuid, a);
     return encode(r);
   }
 
@@ -224,6 +230,7 @@ mixin NetworkComponent {
   final Map<String, NetworkProp<dynamic>> _props = {};
   final Map<String, NetworkCall<dynamic, dynamic>> _calls = {};
 
+  String? nOwner;
   String get nFactory;
   String get nGroup => "";
   String get nCID;
@@ -231,6 +238,7 @@ mixin NetworkComponent {
   bool get nUpdated => _updated;
   bool get isServer => NetworkManager.global.isServer;
   bool get isClient => NetworkManager.global.isClient;
+  bool get isOwner => nOwner != null && nOwner == NetworkManager.global.user;
 
   //--------------------------//
   //------ NetworkComponent -------//
@@ -362,13 +370,13 @@ mixin NetworkComponent {
       }
       var props = c.checkNetworkProp();
       if (props.isNotEmpty) {
-        components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nProps: props));
+        components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nOwner: c.nOwner, nProps: props));
         continue;
       }
     }
     for (var c in willRemove) {
       _removeComponent(c);
-      components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nRemoved: true));
+      components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nOwner: c.nOwner, nRemoved: true));
     }
     return components;
   }
@@ -383,6 +391,7 @@ mixin NetworkComponent {
         continue;
       }
       component ??= createComponent(c.nFactory, group, c.nCID);
+      component.nOwner = c.nOwner;
       if (c.nProps?.isNotEmpty ?? false) {
         component.updateNetworkProp(c.nProps ?? {});
       }
@@ -412,7 +421,7 @@ mixin NetworkComponent {
     return call.call(this, arg);
   }
 
-  static Future<NetworkCallResult> callNetworkCall(NetworkCallArg arg) async {
+  static Future<NetworkCallResult> callNetworkCall(NetworkSession? ctx, NetworkCallArg arg) async {
     var c = findComponent(arg.nCID);
     if (c == null) {
       throw Exception("NetworkComponent(${arg.nCID}) is not exists");
@@ -421,7 +430,7 @@ mixin NetworkComponent {
     if (call == null) {
       throw Exception("NetworkComponent(${arg.nCID}) call ${arg.nName} is not exists");
     }
-    var result = await call.run(arg.uuid, arg.nArg);
+    var result = await call.run(ctx, arg.uuid, arg.nArg);
     return NetworkCallResult(uuid: arg.uuid, nCID: arg.nCID, nName: arg.nName, nResult: result);
   }
 }
