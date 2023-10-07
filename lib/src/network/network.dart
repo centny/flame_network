@@ -214,7 +214,7 @@ class NetworkPropList<T> extends NetworkProp<List<T>> {
   void decode(v) => value = (jsonDecode(v) as List<dynamic>).map((e) => e as T).toList();
 }
 
-typedef NetworkComponentFactory = NetworkComponent Function(String key, String group, String id);
+typedef NetworkComponentFactory = NetworkComponent Function(String key, String group, String cid);
 
 mixin NetworkComponent {
   static final Map<String, NetworkComponentFactory> _factoryAll = {};
@@ -235,14 +235,23 @@ mixin NetworkComponent {
   //--------------------------//
   //------ NetworkComponent -------//
 
-  static void registerFactory(String key, NetworkComponentFactory creator) => _factoryAll[key] = creator;
+  static void registerFactory({String? key, String? group, required NetworkComponentFactory creator}) {
+    if (group != null) {
+      _factoryAll["$group-*"] = creator;
+    }
+    if (key != null) {
+      _factoryAll[key] = creator;
+    }
+  }
 
-  static NetworkComponent createComponent(String key, String group) {
+  static NetworkComponent createComponent(String key, String group, String cid) {
     var creator = _factoryAll[key] ?? _factoryAll["$group-*"] ?? _factoryAll["*"];
     if (creator == null) {
       throw Exception("NetworkComponentFactory by $key is not supported");
     }
-    return creator(key, group, const Uuid().v1());
+    var c = creator(key, group, cid);
+    _addComponent(c);
+    return c;
   }
 
   static void Function(NetworkComponent)? onAdd;
@@ -373,7 +382,7 @@ mixin NetworkComponent {
         }
         continue;
       }
-      component ??= createComponent(c.nFactory, group);
+      component ??= createComponent(c.nFactory, group, c.nCID);
       if (c.nProps?.isNotEmpty ?? false) {
         component.updateNetworkProp(c.nProps ?? {});
       }
