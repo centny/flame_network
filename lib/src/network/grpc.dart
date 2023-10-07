@@ -44,7 +44,7 @@ extension on SyncData {
   NetworkSyncData wrap() {
     return NetworkSyncData(
       uuid: id.uuid,
-      group: groupd,
+      group: group,
       components: components.map((e) => e.wrap()).toList(),
     );
   }
@@ -182,7 +182,7 @@ class NetworkServerGRPC extends ServerServiceBase {
   void networkSync(NetworkSyncData data) {
     var components = data.components.map((e) => e.wrap());
     for (var conn in _sessionConnGroup(data.group)) {
-      var syncData = SyncData(id: newRequestID(), components: components);
+      var syncData = SyncData(id: newRequestID(), group: data.group, components: components);
       conn.add(syncData);
     }
   }

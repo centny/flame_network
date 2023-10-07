@@ -20,7 +20,7 @@ message SyncArg { RequestID id = 1; }
 
 message SyncData {
   RequestID id = 1;
-  string groupd = 2;
+  string group = 2;
   repeated SyncDataComponent components = 3;
 }
 

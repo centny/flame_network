@@ -329,15 +329,15 @@ class SyncArg extends $pb.GeneratedMessage {
 class SyncData extends $pb.GeneratedMessage {
   factory SyncData({
     RequestID? id,
-    $core.String? groupd,
+    $core.String? group,
     $core.Iterable<SyncDataComponent>? components,
   }) {
     final $result = create();
     if (id != null) {
       $result.id = id;
     }
-    if (groupd != null) {
-      $result.groupd = groupd;
+    if (group != null) {
+      $result.group = group;
     }
     if (components != null) {
       $result.components.addAll(components);
@@ -350,7 +350,7 @@ class SyncData extends $pb.GeneratedMessage {
 
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SyncData', createEmptyInstance: create)
     ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
-    ..aOS(2, _omitFieldNames ? '' : 'groupd')
+    ..aOS(2, _omitFieldNames ? '' : 'group')
     ..pc<SyncDataComponent>(3, _omitFieldNames ? '' : 'components', $pb.PbFieldType.PM, subBuilder: SyncDataComponent.create)
     ..hasRequiredFields = false
   ;
@@ -388,13 +388,13 @@ class SyncData extends $pb.GeneratedMessage {
   RequestID ensureId() => $_ensure(0);
 
   @$pb.TagNumber(2)
-  $core.String get groupd => $_getSZ(1);
+  $core.String get group => $_getSZ(1);
   @$pb.TagNumber(2)
-  set groupd($core.String v) { $_setString(1, v); }
+  set group($core.String v) { $_setString(1, v); }
   @$pb.TagNumber(2)
-  $core.bool hasGroupd() => $_has(1);
+  $core.bool hasGroup() => $_has(1);
   @$pb.TagNumber(2)
-  void clearGroupd() => clearField(2);
+  void clearGroup() => clearField(2);
 
   @$pb.TagNumber(3)
   $core.List<SyncDataComponent> get components => $_getList(2);

@@ -85,16 +85,16 @@ const SyncData$json = {
   '1': 'SyncData',
   '2': [
     {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
-    {'1': 'groupd', '3': 2, '4': 1, '5': 9, '10': 'groupd'},
+    {'1': 'group', '3': 2, '4': 1, '5': 9, '10': 'group'},
     {'1': 'components', '3': 3, '4': 3, '5': 11, '6': '.SyncDataComponent', '10': 'components'},
   ],
 };
 
 /// Descriptor for `SyncData`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List syncDataDescriptor = $convert.base64Decode(
-    'CghTeW5jRGF0YRIaCgJpZBgBIAEoCzIKLlJlcXVlc3RJRFICaWQSFgoGZ3JvdXBkGAIgASgJUg'
-    'Zncm91cGQSMgoKY29tcG9uZW50cxgDIAMoCzISLlN5bmNEYXRhQ29tcG9uZW50Ugpjb21wb25l'
-    'bnRz');
+    'CghTeW5jRGF0YRIaCgJpZBgBIAEoCzIKLlJlcXVlc3RJRFICaWQSFAoFZ3JvdXAYAiABKAlSBW'
+    'dyb3VwEjIKCmNvbXBvbmVudHMYAyADKAsyEi5TeW5jRGF0YUNvbXBvbmVudFIKY29tcG9uZW50'
+    'cw==');
 
 @$core.Deprecated('Use callArgDescriptor instead')
 const CallArg$json = {
