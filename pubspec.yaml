@@ -10,7 +10,6 @@ environment:
 dependencies:
   fixnum: ^1.1.0
   flame: ^1.9.1
-  flame_forge2d: ^0.15.0+1
   flutter:
     sdk: flutter
   grpc: ^3.2.4
@@ -26,6 +25,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
+  flame_test: ^1.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
