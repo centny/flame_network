@@ -71,6 +71,8 @@ class TestNetworkConnection with NetworkConnection {
 }
 
 void main() {
+  NetworkManagerGRPC.shared.grpcAddress = Uri(scheme: "grpc", host: "127.0.0.1", port: 51051);
+  NetworkManagerGRPC.shared.webAddress = Uri(scheme: "ws", host: "127.0.0.1", port: 51052);
   test('NetworkGRPC.sync', () async {
     var callback = TestNetworkCallback();
     NetworkManagerGRPC.shared.isServer = true;
