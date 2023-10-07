@@ -78,7 +78,7 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
     return _global!;
   }
 
-  Duration minSync = const Duration(milliseconds: 50);
+  Duration minSync = const Duration(milliseconds: 30);
   DateTime _lastSync = DateTime.fromMillisecondsSinceEpoch(0);
 
   NetworkManager() {
