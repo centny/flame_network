@@ -1,9 +1,24 @@
 import 'dart:collection';
+import 'dart:convert';
 
 import 'package:flame_network/src/common/log.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flame_network/flame_network.dart';
 import 'package:uuid/uuid.dart';
+
+class TestNetworkValue with NetworkValue {
+  Map<String, dynamic> value = {};
+
+  @override
+  void decode(v) {
+    value = jsonDecode(v);
+  }
+
+  @override
+  dynamic encode() {
+    return jsonEncode(value);
+  }
+}
 
 class TestNetworkComponent with NetworkComponent, NetworkEvent {
   bool removed = false;
@@ -27,12 +42,13 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
   NetworkProp<double> sDouble = NetworkProp<double>("double", 0);
   NetworkProp<String> sString = NetworkProp<String>("string", "");
   NetworkProp<Map<String, dynamic>> sMap = NetworkProp<Map<String, dynamic>>("map", {});
-  NetworkPropList<int> sIntList = NetworkPropList<int>("int_list", []);
-  NetworkPropList<double> sDoubleList = NetworkPropList<double>("double_list", []);
-  NetworkPropList<String> sStringList = NetworkPropList<String>("string_list", []);
+  NetworkProp<TestNetworkValue> sNet = NetworkProp("net", TestNetworkValue());
 
   NetworkCall<void, int> cUpdate = NetworkCall("update");
   NetworkCall<String, int> cParse = NetworkCall("parse");
+  NetworkCall<void, TestNetworkValue> cNet0 = NetworkCall("net0", argNew: TestNetworkValue.new);
+  NetworkCall<TestNetworkValue, int> cNet1 = NetworkCall("net1", retNew: TestNetworkValue.new);
+  NetworkCall<TestNetworkValue, TestNetworkValue> cNet2 = NetworkCall("net2", argNew: TestNetworkValue.new, retNew: TestNetworkValue.new);
 
   TestNetworkComponent() {
     registerNetworkProp(sInt, getter: () => intValue, setter: (v) => intValue = v);
@@ -40,12 +56,19 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     registerNetworkProp(sDouble, getter: () => doubleValue, setter: (v) => doubleValue = v);
     registerNetworkProp(sString, getter: () => stringValue, setter: (v) => stringValue = v);
     registerNetworkProp(sMap, getter: () => mapValue, setter: (v) => mapValue = v);
-    registerNetworkProp(sIntList, getter: () => intList, setter: (v) => intList = v);
-    registerNetworkProp(sDoubleList, getter: () => doubleList, setter: (v) => doubleList = v);
-    registerNetworkProp(sStringList, getter: () => stringList, setter: (v) => stringList = v);
+    registerNetworkProp(sNet);
     registerNetworkCall(cUpdate, updateInt);
     registerNetworkCall(cParse, parseInt);
+    registerNetworkCall(cNet0, callNet0);
+    registerNetworkCall(cNet1, callNet1);
+    registerNetworkCall(cNet2, callNet2);
     registerNetworkEvent(event: this, group: "*");
+    try {
+      registerNetworkProp(sInt);
+    } catch (_) {}
+    try {
+      registerNetworkCall(cUpdate, updateInt);
+    } catch (_) {}
   }
 
   void unregister() {
@@ -54,12 +77,14 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     unregisterNetworkProp(sDouble);
     unregisterNetworkProp(sString);
     unregisterNetworkProp(sMap);
-    unregisterNetworkProp(sIntList);
-    unregisterNetworkProp(sDoubleList);
-    unregisterNetworkProp(sStringList);
+    unregisterNetworkProp(sNet);
     unregisterNetworkCall(cUpdate);
     unregisterNetworkCall(cParse);
+    unregisterNetworkCall(cNet0);
+    unregisterNetworkCall(cNet1);
+    unregisterNetworkCall(cNet2);
     unregisterNetworkEvent(this);
+    unregisterFromNetworkManager();
     clearNetworkProp();
     clearNetworkCall();
   }
@@ -74,13 +99,24 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     return "$v";
   }
 
+  Future<void> callNet0(NetworkSession? ctx, String uuid, TestNetworkValue v) async {
+    L.i("${ctx?.user} call $uuid net0=>$v");
+  }
+
+  Future<TestNetworkValue> callNet1(NetworkSession? ctx, String uuid, int v) async {
+    L.i("${ctx?.user} call $uuid net1=>$v");
+    return TestNetworkValue()..value = {"a": 123};
+  }
+
+  Future<TestNetworkValue> callNet2(NetworkSession? ctx, String uuid, TestNetworkValue v) async {
+    L.i("${ctx?.user} call $uuid net2=>$v");
+    return v;
+  }
+
   @override
   void onNetworkRemove() {
     removed = true;
   }
-
-  @override
-  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {}
 }
 
 class TestNetworkConnection with NetworkConnection {
@@ -137,8 +173,10 @@ void main() {
   });
   test('NetworkEvent.event', () async {
     var m = TestNetworkManager();
+    m.session.user = "123";
     var nc = TestNetworkComponent();
     await m.onNetworkState(HashSet.from([m.conn]), m.conn, NetworkState.ready);
+    await m.onNetworkState(HashSet(), m.conn, NetworkState.closed);
     nc.unregister();
   });
   test('NetworkCall.call', () async {
@@ -149,8 +187,14 @@ void main() {
     await nc.networkCall(nc.cUpdate, 100);
     assert(nc.intValue == 100);
 
-    var result = await nc.networkCall(nc.cParse, 200);
-    assert(result == "200");
+    var result1 = await nc.networkCall(nc.cParse, 200);
+    assert(result1 == "200");
+
+    await nc.networkCall(nc.cNet0, TestNetworkValue()..value = {"a": 123});
+    var result2 = await nc.networkCall(nc.cNet1, 1);
+    assert(result2.value["a"] == 123);
+    var result3 = await nc.networkCall(nc.cNet2, TestNetworkValue()..value = {"a": 123});
+    assert(result3.value["a"] == 123);
 
     //cover
     try {

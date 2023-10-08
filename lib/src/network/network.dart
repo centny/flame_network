@@ -73,7 +73,19 @@ mixin NetworkTransport {
 }
 
 mixin NetworkEvent {
-  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info});
+  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
+    var user = conn.session?.user ?? "";
+    if (user.isNotEmpty && state == NetworkState.ready && all.length == 1) {
+      await onNetworkUserConnected(conn, user, info: info);
+    }
+    if (user.isNotEmpty && (state == NetworkState.closed || state == NetworkState.error) && all.isEmpty) {
+      await onNetworkUserDisconnected(conn, user, info: info);
+    }
+  }
+
+  Future<void> onNetworkUserConnected(NetworkConnection conn, String user, {Object? info}) async {}
+  Future<void> onNetworkUserDisconnected(NetworkConnection conn, String user, {Object? info}) async {}
+  void unregisterFromNetworkManager() => NetworkManager.global.unregisterNetworkEvent(this);
 }
 
 abstract class NetworkManager with NetworkTransport, NetworkCallback {
@@ -145,6 +157,11 @@ class NetworkCallArg {
   String nArg;
 
   NetworkCallArg({required this.uuid, required this.nCID, required this.nName, required this.nArg});
+
+  @override
+  String toString() {
+    return "NetworkCallArg(uuid:$uuid,nCID:$nCID,nName:$nName,nArg:$nArg)";
+  }
 }
 
 class NetworkCallResult {
@@ -181,15 +198,22 @@ class NetworkSyncData {
   factory NetworkSyncData.syncSend(group) => NetworkSyncData(uuid: const Uuid().v1(), group: group, components: NetworkComponent.syncSend(group));
 }
 
+mixin NetworkValue {
+  dynamic encode();
+  void decode(dynamic v);
+}
+
 typedef NetworkCallFunction<R, S> = Future<R> Function(NetworkSession? ctx, String uuid, S);
 
 class NetworkCall<R, S> {
   String name;
   NetworkCallFunction<R, S>? exec;
-  NetworkCall(this.name, {this.exec});
+  NetworkValue Function()? argNew;
+  NetworkValue Function()? retNew;
+  NetworkCall(this.name, {this.exec, this.argNew, this.retNew});
 
   Future<String> run(NetworkSession? ctx, String uuid, String arg) async {
-    var a = decode(arg);
+    var a = (argNew?.call()?..decode(arg)) ?? decode(arg);
     var r = await exec!(ctx, uuid, a);
     return encode(r);
   }
@@ -197,12 +221,19 @@ class NetworkCall<R, S> {
   Future<R> call(NetworkComponent c, S arg) async {
     var a = NetworkCallArg(uuid: const Uuid().v1(), nCID: c.nCID, nName: name, nArg: encode(arg));
     var r = await NetworkManager.global.networkCall(a);
-    return decode(r.nResult);
+    return (retNew?.call()?..decode(r.nResult)) ?? decode(r.nResult);
   }
 
-  dynamic decode(String v) => jsonDecode(v);
+  dynamic decode(String v) {
+    return jsonDecode(v);
+  }
 
-  String encode(dynamic v) => jsonEncode(v);
+  String encode(dynamic v) {
+    if (v is NetworkValue) {
+      return v.encode();
+    }
+    return jsonEncode(v);
+  }
 }
 
 class NetworkProp<T> {
@@ -237,16 +268,19 @@ class NetworkProp<T> {
 
   NetworkProp(this.name, this._value);
 
-  dynamic encode() => jsonEncode(value);
+  dynamic encode() {
+    if (value is NetworkValue) {
+      return (value as NetworkValue).encode();
+    }
+    return jsonEncode(value);
+  }
 
-  void decode(dynamic v) => value = jsonDecode(v);
-}
-
-class NetworkPropList<T> extends NetworkProp<List<T>> {
-  NetworkPropList(super.name, super.value);
-
-  @override
-  void decode(v) => value = (jsonDecode(v) as List<dynamic>).map((e) => e as T).toList();
+  void decode(dynamic v) {
+    if (value is NetworkValue) {
+      return (value as NetworkValue).decode(v);
+    }
+    value = jsonDecode(v);
+  }
 }
 
 typedef NetworkComponentFactory = NetworkComponent Function(String key, String group, String cid);
@@ -349,6 +383,9 @@ mixin NetworkComponent {
   //------ NetworkProp -------//
 
   void registerNetworkProp<T>(NetworkProp<T> prop, {T Function()? getter, void Function(T v)? setter}) {
+    if (_props.containsKey(prop.name)) {
+      throw Exception("NetworkProp ${prop.name} is registered");
+    }
     prop.getter = getter;
     prop.setter = setter;
     prop.onChanged = (v) => _updated = true;
@@ -438,6 +475,9 @@ mixin NetworkComponent {
   //------ NetworkCall -------//
 
   void registerNetworkCall<R, S>(NetworkCall<R, S> call, NetworkCallFunction<R, S> exec) {
+    if (_calls.containsKey(call.name)) {
+      throw Exception("NetworkCall ${call.name} is registered");
+    }
     call.exec = exec;
     _calls[call.name] = call;
     _addComponent(this);

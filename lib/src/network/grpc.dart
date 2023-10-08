@@ -238,10 +238,12 @@ class NetworkServerGRPC extends ServerServiceBase {
   Future<CallResult> remoteCall(ServiceCall call, CallArg request) async {
     var session = NetworkSession.from(call.clientMetadata ?? {});
     var conn = _keepSession(session);
+    var arg = request.wrap();
     try {
-      var result = await callback.onNetworkCall(conn, request.wrap());
+      var result = await callback.onNetworkCall(conn, arg);
       return result.wrap();
-    } catch (e) {
+    } catch (e, s) {
+      L.w("[GRPC] network call by $arg fail with $e\n$s");
       return CallResult(id: request.id, cid: request.cid, name: request.name, error: "$e");
     }
   }
@@ -582,6 +584,9 @@ class NetworkManagerGRPC extends NetworkManager {
   }
 
   Future<void> start() async {
+    if (running) {
+      return;
+    }
     L.i("[GRPC] network start by server:$isServer,client:$isClient");
     running = true;
     if (isServer && server == null) {
