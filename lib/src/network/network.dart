@@ -130,9 +130,10 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
   @mustCallSuper
   Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
     var group = conn.session?.group ?? "";
-    _events.forEach((event, g) {
+    await Future.forEach(_events.keys, (event) async {
+      var g = _events[event];
       if (g == group || g == "*") {
-        event.onNetworkState(all, conn, state, info: info);
+        await event.onNetworkState(all, conn, state, info: info);
       }
     });
   }
