@@ -43,6 +43,7 @@ mixin NetworkConnection {
   NetworkState? state;
   bool get isServer;
   bool get isClient;
+  Future<void> networkSync(NetworkSyncData data) => throw UnimplementedError();
 }
 
 enum NetworkState {
@@ -130,6 +131,12 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
   @mustCallSuper
   Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
     var group = conn.session?.group ?? "";
+    if (isServer && conn.isServer && state == NetworkState.ready) {
+      var data = NetworkSyncData.syncSend(group, force: true);
+      if (data.isUpdated) {
+        await conn.networkSync(data);
+      }
+    }
     await Future.forEach(_events.keys, (event) async {
       var g = _events[event];
       if (g == group || g == "*") {
@@ -196,7 +203,7 @@ class NetworkSyncData {
 
   factory NetworkSyncData.create({List<NetworkSyncDataComponent>? components}) => NetworkSyncData(uuid: const Uuid().v1(), group: "*", components: components ?? List.empty(growable: true));
 
-  factory NetworkSyncData.syncSend(group) => NetworkSyncData(uuid: const Uuid().v1(), group: group, components: NetworkComponent.syncSend(group));
+  factory NetworkSyncData.syncSend(group, {bool? force}) => NetworkSyncData(uuid: const Uuid().v1(), group: group, components: NetworkComponent.syncSend(group, force: force));
 }
 
 mixin NetworkValue {
@@ -407,13 +414,13 @@ mixin NetworkComponent {
     _removeComponentCheck();
   }
 
-  Map<String, dynamic> checkNetworkProp() {
-    if (!nUpdated) {
+  Map<String, dynamic> checkNetworkProp({bool? force}) {
+    if (!nUpdated && !(force ?? false)) {
       return {};
     }
     Map<String, dynamic> updated = {};
     for (var prop in _props.values) {
-      if (prop.updated) {
+      if (prop.updated || (force ?? false)) {
         updated[prop.name] = prop.encode();
         prop._updated = false;
       }
@@ -433,7 +440,7 @@ mixin NetworkComponent {
     }
   }
 
-  static List<NetworkSyncDataComponent> syncSend(String group) {
+  static List<NetworkSyncDataComponent> syncSend(String group, {bool? force}) {
     List<NetworkSyncDataComponent> components = [];
     List<NetworkComponent> willRemove = [];
     for (var c in listGroupComponent(group).values) {
@@ -442,7 +449,7 @@ mixin NetworkComponent {
         willRemove.add(c);
         continue;
       }
-      var props = c.checkNetworkProp();
+      var props = c.checkNetworkProp(force: force);
       if (props.isNotEmpty) {
         components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nOwner: c.nOwner, nProps: props));
         continue;

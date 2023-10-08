@@ -120,11 +120,19 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
 }
 
 class TestNetworkConnection with NetworkConnection {
+  bool syncError = false;
   @override
-  bool get isClient => throw UnimplementedError();
+  bool get isClient => true;
 
   @override
-  bool get isServer => throw UnimplementedError();
+  bool get isServer => true;
+
+  @override
+  Future<void> networkSync(NetworkSyncData data) async {
+    if (syncError) {
+      await super.networkSync(data);
+    }
+  }
 }
 
 class TestNetworkManager extends NetworkManager with NetworkCallback {
@@ -158,7 +166,7 @@ void main() {
     assert(session0.hashCode == session1.hashCode);
     assert(session0 == session1);
   });
-  test('NetworkManager', () async {
+  test('NetworkManager.create', () async {
     try {
       var _ = NetworkManager.global;
       assert(false);
@@ -170,6 +178,16 @@ void main() {
     var nc = TestNetworkComponent();
     assert(nc.isServer);
     assert(nc.isClient);
+  });
+  test('NetworkManager.state', () async {
+    var m = TestNetworkManager();
+    var nc = TestNetworkComponent();
+    await m.onNetworkState(HashSet.from([m.conn]), m.conn, NetworkState.ready);
+    try {
+      m.conn.syncError = true;
+      await m.onNetworkState(HashSet.from([m.conn]), m.conn, NetworkState.ready);
+    } catch (_) {}
+    nc.unregister();
   });
   test('NetworkEvent.event', () async {
     var m = TestNetworkManager();

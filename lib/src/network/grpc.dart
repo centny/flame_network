@@ -123,6 +123,13 @@ class _NetworkSyncStream extends NetworkServerConnGRPC {
   Future<void> close() async {
     await controller.sink.close();
   }
+
+  @override
+  Future<void> networkSync(NetworkSyncData data) async {
+    var components = data.components.map((e) => e.wrap());
+    var syncData = SyncData(id: newRequestID(), group: data.group, components: components);
+    controller.sink.add(syncData);
+  }
 }
 
 class NetworkServerGRPC extends ServerServiceBase {

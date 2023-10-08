@@ -7,6 +7,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flame_network/flame_network.dart';
 import 'package:grpc/grpc.dart';
 
+class TestNetworkComponent with NetworkComponent, NetworkEvent {
+  bool removed = false;
+  @override
+  String get nFactory => "test";
+  @override
+  String get nCID => "123";
+  @override
+  bool get nRemoved => removed;
+
+  NetworkProp<int> sInt = NetworkProp<int>("int", 0);
+
+  TestNetworkComponent() {
+    registerNetworkProp(sInt);
+  }
+
+  void unregister() {
+    unregisterNetworkProp(sInt);
+    clearNetworkProp();
+  }
+
+  @override
+  void onNetworkRemove() {
+    removed = true;
+  }
+}
+
 class TestNetworkCallback with NetworkCallback {
   final StreamController<String> _connWaiter = StreamController<String>();
   final StreamController<String> _dataWaiter = StreamController<String>();
@@ -37,6 +63,7 @@ class TestNetworkCallback with NetworkCallback {
 
   @override
   Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
+    NetworkManagerGRPC.shared.onNetworkState(all, conn, state, info: info);
     L.i("[Test] connection to $state,server:${conn.isServer},client:${conn.isClient},info:$info");
     if (conn.isServer) {
       _connWaiter.add("$state");
@@ -65,16 +92,20 @@ class TestNetworkCallback with NetworkCallback {
 
 class TestNetworkConnection with NetworkConnection {
   @override
-  bool get isClient => throw UnimplementedError();
+  bool get isClient => true;
 
   @override
-  bool get isServer => throw UnimplementedError();
+  bool get isServer => true;
+
+  @override
+  Future<void> networkSync(NetworkSyncData data) async {}
 }
 
 void main() {
   NetworkManagerGRPC.shared.grpcAddress = Uri(scheme: "grpc", host: "127.0.0.1", port: 51051);
   NetworkManagerGRPC.shared.webAddress = Uri(scheme: "ws", host: "127.0.0.1", port: 51052);
   test('NetworkGRPC.sync', () async {
+    var nc = TestNetworkComponent();
     var callback = TestNetworkCallback();
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
@@ -91,6 +122,7 @@ void main() {
     ]));
     var received = await callback.waitData();
     L.i("data is $received");
+    nc.unregister();
     await NetworkManagerGRPC.shared.stop();
   });
   test('NetworkGRPC.web', () async {
