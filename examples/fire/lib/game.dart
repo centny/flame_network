@@ -95,11 +95,12 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     if (seat < 0) {
       return "Seat Full";
     }
-    var palyer = Player(group: group, cid: const Uuid().v1())
+    var player = Player(group: group, cid: const Uuid().v1())
       ..nName.value = name
       ..nOwner = owner
       ..nSeat.value = seat;
-    world.add(palyer);
+    players[owner] = player;
+    world.add(player);
     L.i("Game($group) player $owner/$name join game on $group");
     return "OK";
   }
