@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flame_network/src/common/log.dart';
 import 'package:flutter/foundation.dart';
@@ -35,7 +36,7 @@ class TestNetworkCallback with NetworkCallback {
   }
 
   @override
-  void onNetworkState(NetworkConnection conn, NetworkState state, {Object? info}) {
+  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
     L.i("[Test] connection to $state,server:${conn.isServer},client:${conn.isClient},info:$info");
     if (conn.isServer) {
       _connWaiter.add("$state");
@@ -212,7 +213,7 @@ void main() {
     NetworkManagerGRPC.shared.onErrorHandler(const GrpcError.aborted(), null);
     callback.syncError = true;
     await client?.onNetworkSync(conn, NetworkSyncData(uuid: "uuid", group: "group", components: List.empty()));
-    NetworkManagerGRPC.shared.onNetworkState(conn, NetworkState.closed);
+    NetworkManagerGRPC.shared.onNetworkState(HashSet.from([conn]), conn, NetworkState.closed);
 
     //
     NetworkManagerGRPC.shared.isClient = false;

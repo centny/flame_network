@@ -161,18 +161,22 @@ class NetworkServerGRPC extends ServerServiceBase {
     return connGroup;
   }
 
+  void _networkState(NetworkServerConnGRPC conn, NetworkState state, {Object? info}) {
+    callback.onNetworkState(_sessionConnAll(conn.session?.session ?? ""), conn, state, info: info);
+  }
+
   void _addStream(_NetworkSyncStream conn) {
     _sessionConnAll(conn.session?.session ?? "").add(conn);
     _sessionConnGroup(conn.session?.group ?? "").add(conn);
     _sessionConnGroup("*").add(conn);
-    callback.onNetworkState(conn, NetworkState.ready);
+    _networkState(conn, NetworkState.ready);
   }
 
   void _cancleStream(_NetworkSyncStream conn) {
     _sessionConnAll(conn.session?.session ?? "").remove(conn);
     _sessionConnGroup(conn.session?.group ?? "").remove(conn);
     _sessionConnGroup("*").remove(conn);
-    callback.onNetworkState(conn, NetworkState.closed);
+    _networkState(conn, NetworkState.closed);
   }
 
   Future<void> close() async {
@@ -265,24 +269,24 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
       case ConnectionState.connecting:
         L.i("[GRPC] client connection is connecting");
         this.state = NetworkState.connecting;
-        callback.onNetworkState(this, NetworkState.connecting);
+        callback.onNetworkState(HashSet.from([this]), this, NetworkState.connecting);
         break;
       case ConnectionState.ready:
         L.i("[GRPC] client connection is ready");
         this.state = NetworkState.ready;
-        callback.onNetworkState(this, NetworkState.ready);
+        callback.onNetworkState(HashSet.from([this]), this, NetworkState.ready);
         break;
       case ConnectionState.transientFailure:
         L.i("[GRPC] client connection is reconnecting");
         this.state = NetworkState.connecting;
-        callback.onNetworkState(this, NetworkState.connecting);
+        callback.onNetworkState(HashSet.from([this]), this, NetworkState.connecting);
         break;
       case ConnectionState.idle:
         break;
       case ConnectionState.shutdown:
         L.i("[GRPC] client connection is closed");
         this.state = NetworkState.closed;
-        callback.onNetworkState(this, NetworkState.closed);
+        callback.onNetworkState(HashSet.from([this]), this, NetworkState.closed);
         break;
     }
   }
@@ -305,7 +309,7 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
     _syncMonitor = super.remoteSync(request, options: CallOptions(metadata: session?.value));
     _syncMonitor?.listen(
       (data) => onNetworkSync(this, data.wrap()),
-      onError: (e) => callback.onNetworkState(this, NetworkState.error, info: e),
+      onError: (e) => callback.onNetworkState(HashSet.from([this]), this, NetworkState.error, info: e),
       cancelOnError: true,
     );
   }
@@ -498,7 +502,8 @@ class NetworkManagerGRPC extends NetworkManager {
   NetworkManagerGRPC();
 
   @override
-  void onNetworkState(NetworkConnection conn, NetworkState state, {Object? info}) {
+  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
+    super.onNetworkState(all, conn, state);
     if (isClient) {
       L.i("[GRPC] connection status to $state, info is $info");
     }

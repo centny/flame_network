@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
 import '../common/log.dart';
@@ -53,9 +54,9 @@ enum NetworkState {
 }
 
 mixin NetworkCallback {
-  void onNetworkState(NetworkConnection conn, NetworkState state, {Object? info}) {}
-  Future<NetworkCallResult> onNetworkCall(NetworkConnection conn, NetworkCallArg arg) async => NetworkComponent.callNetworkCall(conn.session, arg);
-  Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async => NetworkComponent.syncRecv(data.group, data.components);
+  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info});
+  Future<NetworkCallResult> onNetworkCall(NetworkConnection conn, NetworkCallArg arg);
+  Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data);
 }
 
 mixin NetworkTransport {
@@ -69,6 +70,10 @@ mixin NetworkTransport {
   set standalone(bool v) => isServer = isClient = v;
   Future<void> networkSync(NetworkSyncData data);
   Future<NetworkCallResult> networkCall(NetworkCallArg arg);
+}
+
+mixin NetworkEvent {
+  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info});
 }
 
 abstract class NetworkManager with NetworkTransport, NetworkCallback {
@@ -85,6 +90,7 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
   DateTime _lastSync = DateTime.fromMillisecondsSinceEpoch(0);
 
   String? get user => session.user;
+  final Map<NetworkEvent, String> _events = {};
 
   NetworkManager() {
     _global = this;
@@ -107,6 +113,29 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
     }
     return updated;
   }
+
+  @override
+  @mustCallSuper
+  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
+    var group = conn.session?.group ?? "";
+    _events.forEach((event, g) {
+      if (g == group || g == "*") {
+        event.onNetworkState(all, conn, state, info: info);
+      }
+    });
+  }
+
+  @override
+  @mustCallSuper
+  Future<NetworkCallResult> onNetworkCall(NetworkConnection conn, NetworkCallArg arg) async => NetworkComponent.callNetworkCall(conn.session, arg);
+
+  @override
+  @mustCallSuper
+  Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async => NetworkComponent.syncRecv(data.group, data.components);
+
+  void registerNetworkEvent({required NetworkEvent event, String? group}) => _events[event] = group ?? "*";
+
+  void unregisterNetworkEvent(NetworkEvent event) => _events.remove(event);
 }
 
 class NetworkCallArg {
@@ -306,6 +335,13 @@ mixin NetworkComponent {
       _removeComponent(this);
     }
   }
+
+  //--------------------------//
+  //------ NetworkEvent -------//
+
+  void registerNetworkEvent({required NetworkEvent event, String? group}) => NetworkManager.global.registerNetworkEvent(event: event, group: group ?? nGroup);
+
+  void unregisterNetworkEvent(NetworkEvent event) => NetworkManager.global.unregisterNetworkEvent(event);
 
   void onNetworkRemove();
 

@@ -1,9 +1,11 @@
+import 'dart:collection';
+
 import 'package:flame_network/src/common/log.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flame_network/flame_network.dart';
 import 'package:uuid/uuid.dart';
 
-class TestNetworkComponent with NetworkComponent {
+class TestNetworkComponent with NetworkComponent, NetworkEvent {
   bool removed = false;
   @override
   String get nFactory => "test";
@@ -43,6 +45,7 @@ class TestNetworkComponent with NetworkComponent {
     registerNetworkProp(sStringList, getter: () => stringList, setter: (v) => stringList = v);
     registerNetworkCall(cUpdate, updateInt);
     registerNetworkCall(cParse, parseInt);
+    registerNetworkEvent(event: this, group: "*");
   }
 
   void unregister() {
@@ -56,6 +59,7 @@ class TestNetworkComponent with NetworkComponent {
     unregisterNetworkProp(sStringList);
     unregisterNetworkCall(cUpdate);
     unregisterNetworkCall(cParse);
+    unregisterNetworkEvent(this);
     clearNetworkProp();
     clearNetworkCall();
   }
@@ -74,6 +78,9 @@ class TestNetworkComponent with NetworkComponent {
   void onNetworkRemove() {
     removed = true;
   }
+
+  @override
+  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {}
 }
 
 class TestNetworkConnection with NetworkConnection {
@@ -127,6 +134,35 @@ void main() {
     var nc = TestNetworkComponent();
     assert(nc.isServer);
     assert(nc.isClient);
+  });
+  test('NetworkEvent.event', () async {
+    var m = TestNetworkManager();
+    var nc = TestNetworkComponent();
+    await m.onNetworkState(HashSet.from([m.conn]), m.conn, NetworkState.ready);
+    nc.unregister();
+  });
+  test('NetworkCall.call', () async {
+    var m = TestNetworkManager();
+    m.session.user = "u123";
+    var nc = TestNetworkComponent();
+
+    await nc.networkCall(nc.cUpdate, 100);
+    assert(nc.intValue == 100);
+
+    var result = await nc.networkCall(nc.cParse, 200);
+    assert(result == "200");
+
+    //cover
+    try {
+      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: "none", nName: nc.cUpdate.name, nArg: "100"));
+      assert(false); //not reach
+    } catch (_) {}
+    try {
+      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: nc.nCID, nName: "none", nArg: "100"));
+      assert(false); //not reach
+    } catch (_) {}
+
+    nc.unregister();
   });
   test('NetworkComponent.create', () async {
     NetworkComponent.onAdd = (p0) => L.i("add ->${p0.nCID}");
@@ -204,33 +240,18 @@ void main() {
       assert(false);
     } catch (_) {}
   });
-  test('NetworkComponent.call', () async {
+  test('NetworkComponent.owner', () async {
     var m = TestNetworkManager();
     m.session.user = "u123";
     var nc = TestNetworkComponent();
-
-    await nc.networkCall(nc.cUpdate, 100);
-    assert(nc.intValue == 100);
-
-    var result = await nc.networkCall(nc.cParse, 200);
-    assert(result == "200");
-
-    //cover
-    try {
-      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: "none", nName: nc.cUpdate.name, nArg: "100"));
-      assert(false); //not reach
-    } catch (_) {}
-    try {
-      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: nc.nCID, nName: "none", nArg: "100"));
-      assert(false); //not reach
-    } catch (_) {}
-
+    assert(!nc.isOwner);
+    nc.nOwner = m.session.user;
+    assert(nc.isOwner);
     nc.unregister();
   });
-
   test('Network.cover', () async {
     var conn = TestNetworkConnection();
     var cb = TestNetworkManager();
-    cb.onNetworkState(conn, NetworkState.ready);
+    cb.onNetworkState(HashSet.from([conn]), conn, NetworkState.ready);
   });
 }
