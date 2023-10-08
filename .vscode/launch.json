@@ -22,21 +22,21 @@
             "flutterMode": "release"
         },
         {
-            "name": "fishing",
-            "cwd": "examples/fishing",
+            "name": "fire",
+            "cwd": "examples/fire",
             "request": "launch",
             "type": "dart"
         },
         {
-            "name": "fishing (profile mode)",
-            "cwd": "examples/fishing",
+            "name": "fire (profile mode)",
+            "cwd": "examples/fire",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile"
         },
         {
-            "name": "fishing (release mode)",
-            "cwd": "examples/fishing",
+            "name": "fire (release mode)",
+            "cwd": "examples/fire",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
