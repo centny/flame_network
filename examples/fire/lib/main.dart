@@ -37,7 +37,7 @@ void main() {
   // );
   runApp(
     GameWidget<FireGame>.controlled(
-      gameFactory: FireGame.new,
+      gameFactory: () => FireGame(),
       overlayBuilderMap: {
         'LoginMenu': (_, game) => AppMenu(body: LoginMenu(game: game)),
       },

@@ -38,7 +38,11 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
 
   final NetworkCall<String, String> nJoin = NetworkCall("join");
 
-  FireGame() {
+  bool autoZoom = true;
+
+  FireGame({World? world, bool? autoZoom})
+      : autoZoom = autoZoom ?? true,
+        super(world: world ?? FireWorld()) {
     NetworkComponent.registerFactory(group: group, creator: onNetworkCreate);
     registerNetworkCall(nJoin, onPlayerJoin);
     registerNetworkEvent(event: this);
@@ -55,6 +59,13 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
 
   @override
   bool get nRemoved => false;
+
+  @override
+  Vector2 get size => Vector2(1280, 720);
+
+  Vector2 _scale = Vector2(1, 1);
+
+  Vector2 get scale => _scale;
 
   void initSeat() {
     for (var i = 0; i < 3; i++) {
@@ -143,12 +154,16 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    if (autoZoom) {
+      _scale = Vector2(camera.visibleWorldRect.width / size.x, camera.visibleWorldRect.height / size.y);
+    }
+    camera.viewport.add(FpsTextComponent());
+
     initSeat();
+
     var backgroud = RectangleComponent(size: size, anchor: Anchor.center);
     backgroud.paint.color = const Color.fromARGB(255, 100, 100, 100);
-    var box = RectangleComponent(position: size / 2, size: Vector2(100, 100));
-    box.add(RectangleHitbox());
-    camera.viewport.add(FpsTextComponent());
+    var box = RectangleComponent(size: Vector2(100, 100))..add(RectangleHitbox());
     world.add(backgroud);
     world.add(box);
     world.addAll(createWalls());
@@ -161,28 +176,30 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   }
 
   List<Component> createWalls() {
-    final view = camera.visibleWorldRect;
-    double wallOffset = 1;
+    var view = size;
+    double wallOffset = -16;
     double wallSize = 1000;
-    double x = view.width / 2 + wallSize / 2 - wallOffset;
-    double y = view.height / 2 + wallSize / 2 - wallOffset;
+    double x = view.x / 2 + wallSize / 2 - wallOffset;
+    double y = view.y / 2 + wallSize / 2 - wallOffset;
     return [
-      Wall(direct: Vector2(1, 0), position: Vector2(-x, 0), size: Vector2(wallSize, view.height + 2 * wallSize)), //left
-      Wall(direct: Vector2(0, -1), position: Vector2(0, -y), size: Vector2(view.width + 2 * wallSize, wallSize)), //top
-      Wall(direct: Vector2(-1, 0), position: Vector2(x, 0), size: Vector2(wallSize, view.height + 2 * wallSize)), //right
-      Wall(direct: Vector2(0, 1), position: Vector2(0, y), size: Vector2(view.width + 2 * wallSize, wallSize)), //bottom
+      Wall(direct: Vector2(1, 0), position: Vector2(-x, 0), size: Vector2(wallSize, view.y + 2 * wallSize)), //left
+      Wall(direct: Vector2(0, -1), position: Vector2(0, -y), size: Vector2(view.x + 2 * wallSize, wallSize)), //top
+      Wall(direct: Vector2(-1, 0), position: Vector2(x, 0), size: Vector2(wallSize, view.y + 2 * wallSize)), //right
+      Wall(direct: Vector2(0, 1), position: Vector2(0, y), size: Vector2(view.x + 2 * wallSize, wallSize)), //bottom
     ];
   }
 
   @override
   void onPanUpdate(DragUpdateInfo info) async {
     var p = camera.globalToLocal(info.eventPosition.game);
+    p = Vector2(p.x / scale.x, p.y / scale.y);
     await Player.current?.turnTo(p);
   }
 
   @override
   void onTapDown(TapDownEvent event) async {
     var p = camera.globalToLocal(event.canvasPosition);
+    p = Vector2(p.x / scale.x, p.y / scale.y);
     await Player.current?.fireTo(p);
   }
 
@@ -192,6 +209,16 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
       Player.current?.switchWeapon();
     }
     return super.onKeyEvent(event, keysPressed);
+  }
+}
+
+class FireWorld extends World with HasGameReference<FireGame> {
+  @override
+  void render(Canvas canvas) {
+    if (game.autoZoom) {
+      canvas.scale(game.scale.x, game.scale.y);
+    }
+    super.render(canvas);
   }
 }
 
@@ -231,7 +258,9 @@ class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
   @override
   bool get nRemoved => isRemoved;
 
-  Bullet({required this.group, String? cid}) : cid = cid ?? const Uuid().v1() {
+  Bullet({required this.group, String? cid})
+      : cid = cid ?? const Uuid().v1(),
+        super(anchor: Anchor.center, radius: 16) {
     registerNetworkProp(nDirect);
     registerNetworkProp(nSpeed);
     registerNetworkProp(nColor, getter: () => paint.color, setter: (v) => paint.color = v);
@@ -247,9 +276,7 @@ class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    anchor = Anchor.center;
-    radius = 16;
-    add(CircleHitbox(radius: radius * 1.5));
+    add(CircleHitbox(anchor: Anchor.center, position: size / 2, radius: radius * 1)..renderShape = true);
   }
 
   @override

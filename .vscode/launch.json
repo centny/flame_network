@@ -28,6 +28,15 @@
             "type": "dart"
         },
         {
+            "name": "fire (server)",
+            "cwd": "examples/fire",
+            "args": [
+                "--dart-define=MODE=server"
+            ],
+            "request": "launch",
+            "type": "dart"
+        },
+        {
             "name": "fire (profile mode)",
             "cwd": "examples/fire",
             "request": "launch",
