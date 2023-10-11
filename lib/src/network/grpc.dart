@@ -47,6 +47,7 @@ extension on SyncData {
     return NetworkSyncData(
       uuid: id.uuid,
       group: group,
+      whole: whole,
       components: components.map((e) => e.wrap()).toList(),
     );
   }
@@ -127,7 +128,7 @@ class _NetworkSyncStream extends NetworkServerConnGRPC {
   @override
   Future<void> networkSync(NetworkSyncData data) async {
     var components = data.components.map((e) => e.wrap());
-    var syncData = SyncData(id: newRequestID(), group: data.group, components: components);
+    var syncData = SyncData(id: newRequestID(), group: data.group, whole: data.whole, components: components);
     controller.sink.add(syncData);
   }
 }
@@ -197,7 +198,7 @@ class NetworkServerGRPC extends ServerServiceBase {
   void networkSync(NetworkSyncData data) {
     var components = data.components.map((e) => e.wrap());
     for (var conn in _sessionConnGroup(data.group)) {
-      var syncData = SyncData(id: newRequestID(), group: data.group, components: components);
+      var syncData = SyncData(id: newRequestID(), group: data.group, whole: data.whole, components: components);
       conn.add(syncData);
     }
   }

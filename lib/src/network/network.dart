@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -135,7 +136,7 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
   Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
     var group = conn.session?.group ?? "";
     if (isServer && conn.isServer && state == NetworkState.ready) {
-      var data = NetworkSyncData.syncSend(group, force: true);
+      var data = NetworkSyncData.syncSend(group, whole: true);
       if (data.isUpdated) {
         await conn.networkSync(data);
       }
@@ -158,7 +159,7 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
 
   @override
   @mustCallSuper
-  Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async => NetworkComponent.syncRecv(data.group, data.components);
+  Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async => NetworkComponent.syncRecv(data.group, data.components, whole: data.whole);
 
   void registerNetworkEvent({required NetworkEvent event, String? group}) => _events[event] = group ?? "*";
 
@@ -201,16 +202,17 @@ class NetworkSyncDataComponent {
 class NetworkSyncData {
   String uuid;
   String group = "*";
+  bool? whole; // if components container all NetworkComponents, if true client should remove NetworkComponents which is not in components
 
   List<NetworkSyncDataComponent> components;
 
-  bool get isUpdated => components.isNotEmpty;
+  bool get isUpdated => components.isNotEmpty || (whole ?? false);
 
-  NetworkSyncData({required this.uuid, required this.group, required this.components});
+  NetworkSyncData({required this.uuid, required this.group, this.whole, required this.components});
 
-  factory NetworkSyncData.create({List<NetworkSyncDataComponent>? components}) => NetworkSyncData(uuid: const Uuid().v1(), group: "*", components: components ?? List.empty(growable: true));
+  factory NetworkSyncData.create({List<NetworkSyncDataComponent>? components, bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: "*", whole: whole, components: components ?? List.empty(growable: true));
 
-  factory NetworkSyncData.syncSend(group, {bool? force}) => NetworkSyncData(uuid: const Uuid().v1(), group: group, components: NetworkComponent.syncSend(group, force: force));
+  factory NetworkSyncData.syncSend(group, {bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: group, whole: whole, components: NetworkComponent.syncSend(group, whole: whole));
 }
 
 mixin NetworkValue {
@@ -421,13 +423,13 @@ mixin NetworkComponent {
     _removeComponentCheck();
   }
 
-  Map<String, dynamic> checkNetworkProp({bool? force}) {
-    if (!nUpdated && !(force ?? false)) {
+  Map<String, dynamic> checkNetworkProp({bool? whole}) {
+    if (!nUpdated && !(whole ?? false)) {
       return {};
     }
     Map<String, dynamic> updated = {};
     for (var prop in _props.values) {
-      if (prop.updated || (force ?? false)) {
+      if (prop.updated || (whole ?? false)) {
         updated[prop.name] = prop.encode();
         prop._updated = false;
       }
@@ -451,7 +453,7 @@ mixin NetworkComponent {
     }
   }
 
-  static List<NetworkSyncDataComponent> syncSend(String group, {bool? force}) {
+  static List<NetworkSyncDataComponent> syncSend(String group, {bool? whole}) {
     List<NetworkSyncDataComponent> components = [];
     List<NetworkComponent> willRemove = [];
     for (var c in listGroupComponent(group).values) {
@@ -460,7 +462,7 @@ mixin NetworkComponent {
         willRemove.add(c);
         continue;
       }
-      var props = c.checkNetworkProp(force: force);
+      var props = c.checkNetworkProp(whole: whole);
       if (props.isNotEmpty) {
         components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nOwner: c.nOwner, nProps: props));
         continue;
@@ -473,7 +475,8 @@ mixin NetworkComponent {
     return components;
   }
 
-  static void syncRecv(String group, List<NetworkSyncDataComponent> components) {
+  static void syncRecv(String group, List<NetworkSyncDataComponent> components, {bool? whole}) {
+    var cidAll = HashSet<String>();
     for (var c in components) {
       var component = findComponent(c.nCID);
       if (c.nRemoved ?? false) {
@@ -482,10 +485,22 @@ mixin NetworkComponent {
         }
         continue;
       }
+      cidAll.add(c.nCID);
       component ??= createComponent(c.nFactory, group, c.nCID);
       component.nOwner = c.nOwner;
       if (c.nProps?.isNotEmpty ?? false) {
         component.updateNetworkProp(c.nProps ?? {});
+      }
+    }
+    if (whole ?? false) {
+      var componentRemove = [];
+      _componentAll.forEach((cid, c) {
+        if (!cidAll.contains(cid)) {
+          componentRemove.add(c);
+        }
+      });
+      for (var c in componentRemove) {
+        _removeComponent(c);
       }
     }
   }

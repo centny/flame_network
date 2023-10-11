@@ -22,10 +22,11 @@ class TestNetworkValue with NetworkValue {
 
 class TestNetworkComponent with NetworkComponent, NetworkEvent {
   bool removed = false;
+  String cid = "123";
   @override
   String get nFactory => "test";
   @override
-  String get nCID => "123";
+  String get nCID => cid;
   @override
   bool get nRemoved => removed;
 
@@ -165,6 +166,7 @@ void main() {
     assert(session1.session == "123");
     assert(session0.hashCode == session1.hashCode);
     assert(session0 == session1);
+    assert(session0.toString() != session1.toString());
   });
   test('NetworkManager.create', () async {
     try {
@@ -255,7 +257,7 @@ void main() {
   });
   test('NetworkComponent.sync', () async {
     var cb = TestNetworkManager();
-    var nc = TestNetworkComponent();
+    var nc1 = TestNetworkComponent();
 
     var cs1 = NetworkComponent.syncSend("*");
     assert(cs1.length == 1);
@@ -265,7 +267,10 @@ void main() {
 
     cb.sync("*");
 
-    nc.unregister();
+    NetworkComponent.syncRecv("*", [], whole: true);
+    assert(NetworkComponent.findComponent(nc1.cid) == null);
+
+    nc1.unregister();
   });
   test('NetworkComponent.remove', () async {
     var nc1 = TestNetworkComponent();

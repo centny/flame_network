@@ -344,6 +344,7 @@ class SyncData extends $pb.GeneratedMessage {
   factory SyncData({
     RequestID? id,
     $core.String? group,
+    $core.bool? whole,
     $core.Iterable<SyncDataComponent>? components,
   }) {
     final $result = create();
@@ -352,6 +353,9 @@ class SyncData extends $pb.GeneratedMessage {
     }
     if (group != null) {
       $result.group = group;
+    }
+    if (whole != null) {
+      $result.whole = whole;
     }
     if (components != null) {
       $result.components.addAll(components);
@@ -365,7 +369,8 @@ class SyncData extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'SyncData', createEmptyInstance: create)
     ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
     ..aOS(2, _omitFieldNames ? '' : 'group')
-    ..pc<SyncDataComponent>(3, _omitFieldNames ? '' : 'components', $pb.PbFieldType.PM, subBuilder: SyncDataComponent.create)
+    ..aOB(3, _omitFieldNames ? '' : 'whole')
+    ..pc<SyncDataComponent>(4, _omitFieldNames ? '' : 'components', $pb.PbFieldType.PM, subBuilder: SyncDataComponent.create)
     ..hasRequiredFields = false
   ;
 
@@ -411,7 +416,16 @@ class SyncData extends $pb.GeneratedMessage {
   void clearGroup() => clearField(2);
 
   @$pb.TagNumber(3)
-  $core.List<SyncDataComponent> get components => $_getList(2);
+  $core.bool get whole => $_getBF(2);
+  @$pb.TagNumber(3)
+  set whole($core.bool v) { $_setBool(2, v); }
+  @$pb.TagNumber(3)
+  $core.bool hasWhole() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearWhole() => clearField(3);
+
+  @$pb.TagNumber(4)
+  $core.List<SyncDataComponent> get components => $_getList(3);
 }
 
 class CallArg extends $pb.GeneratedMessage {

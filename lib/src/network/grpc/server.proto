@@ -22,7 +22,8 @@ message SyncArg { RequestID id = 1; }
 message SyncData {
   RequestID id = 1;
   string group = 2;
-  repeated SyncDataComponent components = 3;
+  bool whole = 3;
+  repeated SyncDataComponent components = 4;
 }
 
 message CallArg {

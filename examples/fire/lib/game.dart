@@ -370,6 +370,14 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
     }
   }
 
+  @override
+  void onRemove() {
+    super.onRemove();
+    if (current == this) {
+      current = null;
+    }
+  }
+
   Bullet _createBullet() {
     var b = Bullet(group: game.nGroup);
     b.nPosition.value = position + nWeaponDirect.value * weaponView.height;
