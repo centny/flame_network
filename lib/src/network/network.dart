@@ -143,7 +143,11 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
     await Future.forEach(_events.keys, (event) async {
       var g = _events[event];
       if (g == group || g == "*") {
-        await event.onNetworkState(all, conn, state, info: info);
+        try {
+          await event.onNetworkState(all, conn, state, info: info);
+        } catch (e, s) {
+          L.e("NetworkManager call network event on group $g throw error $e\n$s");
+        }
       }
     });
   }
