@@ -18,6 +18,7 @@ import 'log.dart';
 class FactoryType {
   static const String player = "Player";
   static const String bullet = "Bullet";
+  static const String boss = "Boss";
 }
 
 class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents, HasCollisionDetection, NetworkGame, NetworkComponent, NetworkEvent {
@@ -150,8 +151,12 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
         var bullet = Bullet(group: group, cid: id);
         world.add(bullet);
         return bullet;
+      case FactoryType.boss:
+        var boss = Boss(group: group, cid: id);
+        world.add(boss);
+        return boss;
       default:
-        throw Exception("NetworkComponent $group.$key is not supported");
+        throw Exception("onNetworkCreate $group.$key is not supported");
     }
   }
 
@@ -179,9 +184,9 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
 
     var backgroud = RectangleComponent(size: size, anchor: Anchor.center);
     backgroud.paint.color = const Color.fromARGB(255, 100, 100, 100);
-    var box = RectangleComponent(size: Vector2(100, 100))..add(RectangleHitbox());
+    var boss = Boss(group: nGroup);
     world.add(backgroud);
-    world.add(box);
+    world.add(boss);
     world.addAll(createWalls());
   }
 
@@ -252,9 +257,50 @@ class Wall extends RectangleComponent {
   }
 }
 
+class Boss extends CircleComponent with NetworkComponent {
+  final String cid;
+  final String group;
+
+  @override
+  String get nCID => cid;
+
+  @override
+  String get nFactory => FactoryType.boss;
+
+  @override
+  bool get nRemoved => isRemoved;
+
+  @override
+  String get nGroup => group;
+
+  NetworkProp<int> nHealthy = NetworkProp("healthy", 10000);
+
+  final TextComponent _show = TextComponent(anchor: Anchor.center);
+
+  Boss({required this.group, String? cid, super.position})
+      : cid = cid ?? const Uuid().v1(),
+        super(radius: 160, anchor: Anchor.center) {
+    registerNetworkProp(nHealthy, setter: (v) => _show.text = "$v");
+  }
+
+  @override
+  Future<void> onLoad() async {
+    await super.onLoad();
+    anchor = Anchor.center;
+    paint.color = Colors.deepOrange;
+    _show.position = size / 2;
+    add(CircleHitbox());
+    add(_show);
+  }
+
+  @override
+  void onNetworkRemove() => removeFromParent();
+}
+
 class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
   final String cid;
   final String group;
+  final int power;
   final NetworkPropVector2 nDirect = NetworkPropVector2("direct", Vector2(0, 1));
   final NetworkProp<double> nSpeed = NetworkProp("speed", 1000);
   final NetworkPropColor nColor = NetworkPropColor("color", Colors.white);
@@ -274,8 +320,9 @@ class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
   @override
   bool get nRemoved => isRemoved;
 
-  Bullet({required this.group, String? cid})
+  Bullet({required this.group, String? cid, int? power})
       : cid = cid ?? const Uuid().v1(),
+        power = power ?? 1,
         super(anchor: Anchor.center, radius: 16) {
     registerNetworkProp(nDirect);
     registerNetworkProp(nSpeed);
@@ -309,10 +356,18 @@ class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
   @override
   void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
-    if (NetworkManager.global.isServer && other is Wall) {
-      nDirect.value = nDirect.value.reflected(other.direct);
+    if (isServer) {
+      if (other is Wall) {
+        nDirect.value = nDirect.value.reflected(other.direct);
+      }
+      if (other is Boss) {
+        other.nHealthy.value -= power;
+        if (other.nHealthy.value <= 0) {
+          other.removeFromParent();
+        }
+        removeFromParent();
+      }
     }
-    // removeFromParent();
   }
 }
 
@@ -395,7 +450,7 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
   }
 
   Bullet _createBullet() {
-    var b = Bullet(group: game.nGroup);
+    var b = Bullet(group: game.nGroup, power: nWeaponUsing.value + 1);
     b.nPosition.value = position + nWeaponDirect.value * weaponView.height;
     b.nDirect.value = nWeaponDirect.value;
     b.nColor.value = weaponView.paint.color;
