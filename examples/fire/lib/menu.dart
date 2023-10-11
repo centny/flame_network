@@ -34,34 +34,51 @@ class LoginMenu extends StatefulWidget {
 
 class LoginMenuState extends State<LoginMenu> {
   final TextEditingController username = TextEditingController();
-  String showMessage = "";
+  String message = "";
+
+  void showMessage() {
+    var snackBar = SnackBar(
+      content: Text(message),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(snackBar);
+  }
 
   void onStart() async {
-    if (NetworkManagerGRPC.shared.isClient) {
-      if (username.text.isEmpty) {
-        return;
+    try {
+      if (NetworkManagerGRPC.shared.isClient) {
+        if (username.text.isEmpty) {
+          return;
+        }
+        NetworkManagerGRPC.shared.session.session = const Uuid().v1();
+        NetworkManagerGRPC.shared.session.group = widget.game.nGroup;
+        NetworkManagerGRPC.shared.session.user = username.text;
       }
-      NetworkManagerGRPC.shared.session.session = const Uuid().v1();
-      NetworkManagerGRPC.shared.session.group = widget.game.nGroup;
-      NetworkManagerGRPC.shared.session.user = username.text;
-    }
 
-    await NetworkManagerGRPC.shared.start();
+      await NetworkManagerGRPC.shared.start();
 
-    if (NetworkManagerGRPC.shared.isClient) {
-      var name = username.text;
-      var res = await widget.game.join(username.text);
-      if (res != "OK") {
-        L.i("Game(${widget.game.nGroup}) $name join fail with $res");
-        setState(() {
-          showMessage = res;
-        });
-        return;
+      if (NetworkManagerGRPC.shared.isClient) {
+        var name = username.text;
+        L.i("Game(${widget.game.nGroup}) $name start join to game");
+        var res = await widget.game.join(username.text);
+        if (res != "OK") {
+          L.w("Game(${widget.game.nGroup}) $name join to game fail with $res");
+          setState(() {
+            message = res;
+            showMessage();
+          });
+          return;
+        }
+        L.i("Game(${widget.game.nGroup}) $name join to game success");
       }
-      L.i("Game(${widget.game.nGroup}) $name join success");
-    }
 
-    widget.game.overlays.remove('LoginMenu');
+      widget.game.overlays.remove('LoginMenu');
+    } catch (e, s) {
+      L.e("Game(${widget.game.nGroup}) join to game fail with $e\n$s");
+      setState(() {
+        message = "connect to server fail";
+        showMessage();
+      });
+    }
   }
 
   @override
@@ -123,7 +140,7 @@ Use W Keys for change weapon.''',
             ),
             const SizedBox(height: 20),
             Text(
-              showMessage,
+              message,
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 14, color: Colors.red),
             ),
