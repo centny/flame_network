@@ -118,10 +118,12 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
 
   @override
   Future<void> onNetworkUserDisconnected(NetworkConnection conn, String user, {Object? info}) async {
-    var player = players.remove(user);
-    if (player != null) {
-      player.removeFromParent();
-      releaseSeat(player.nSeat.value);
+    if (isServer) {
+      var player = players.remove(user);
+      if (player != null) {
+        player.removeFromParent();
+        releaseSeat(player.nSeat.value);
+      }
     }
   }
 
