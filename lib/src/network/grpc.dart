@@ -176,6 +176,7 @@ class NetworkServerGRPC extends ServerServiceBase {
     _sessionConnAll(conn.session?.session ?? "").add(conn);
     _sessionConnGroup(conn.session?.group ?? "").add(conn);
     _sessionConnGroup("*").add(conn);
+    L.d("[GRPC] add one network sync stream on ${conn.session?.group}/${conn.session?.user}/${conn.session?.session}");
     _networkState(conn, NetworkState.ready);
   }
 
@@ -183,6 +184,7 @@ class NetworkServerGRPC extends ServerServiceBase {
     _sessionConnAll(conn.session?.session ?? "").remove(conn);
     _sessionConnGroup(conn.session?.group ?? "").remove(conn);
     _sessionConnGroup("*").remove(conn);
+    L.d("[GRPC] remove network sync stream on ${conn.session?.group}/${conn.session?.user}/${conn.session?.session}");
     _networkState(conn, NetworkState.closed);
   }
 
@@ -209,6 +211,7 @@ class NetworkServerGRPC extends ServerServiceBase {
       }
     });
     for (var key in keys) {
+      L.i("[GRPC] remove timeout session $key");
       _sessionAll.remove(key);
       for (var conn in _sessionConnAll(key).toSet()) {
         await conn.close();
@@ -522,19 +525,6 @@ class NetworkManagerGRPC extends NetworkManager {
     L.e("[GRPC] server handler error $error\n$trace");
   }
 
-  Future<void> ticker() async {
-    try {
-      if (isServer) {
-        await service!.timeout(keepalive * 2);
-      }
-      if (isClient) {
-        await _keep();
-      }
-    } catch (e) {
-      L.e("[GRPC] ticker proc fail with $e");
-    }
-  }
-
   Future<void> _listen() async {
     service = NetworkServerGRPC(callback);
     server = HandledServerGRPC.create(
@@ -549,7 +539,6 @@ class NetworkManagerGRPC extends NetworkManager {
       L.i("[GRPC] start web server on $webAddress");
       await server?.web(address: webAddress.host, port: webAddress.port, security: security);
     }
-    timer = Timer.periodic(const Duration(seconds: 1), (t) => ticker());
   }
 
   Future<void> reconnect() async {
@@ -575,7 +564,24 @@ class NetworkManagerGRPC extends NetworkManager {
     client?.startMonitorSync();
   }
 
-  Future<void> _keep() async {
+  Future<void> _ticker() async {
+    timer = Timer.periodic(const Duration(seconds: 1), (t) => onTicker());
+  }
+
+  Future<void> onTicker() async {
+    try {
+      if (isServer) {
+        await service!.timeout(keepalive * 2);
+      }
+      if (isClient) {
+        await keep();
+      }
+    } catch (e) {
+      L.e("[GRPC] ticker proc fail with $e");
+    }
+  }
+
+  Future<void> keep() async {
     try {
       await client!.ping(keepalive);
     } catch (e) {
@@ -602,10 +608,12 @@ class NetworkManagerGRPC extends NetworkManager {
     if (isClient && channel == null) {
       await reconnect();
     }
+    await _ticker();
   }
 
   Future<void> stop() async {
     running = false;
+    timer?.cancel();
     if (isServer && server != null) {
       L.i("[GRPC] server is stopping");
       timer?.cancel();

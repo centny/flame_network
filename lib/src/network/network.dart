@@ -36,6 +36,9 @@ class NetworkSession {
   bool operator ==(Object other) {
     return other is NetworkSession && session == other.session;
   }
+
+  @override
+  String toString() => jsonEncode(value);
 }
 
 mixin NetworkConnection {

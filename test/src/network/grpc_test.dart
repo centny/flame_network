@@ -169,7 +169,7 @@ void main() {
     L.i("conn is $ready");
     await NetworkManagerGRPC.shared.ping(const Duration(seconds: 3));
     await Future.delayed(const Duration(milliseconds: 100));
-    await NetworkManagerGRPC.shared.ticker();
+    await NetworkManagerGRPC.shared.onTicker();
     var closed = await callback.waitConn();
     L.i("conn is $closed");
     await NetworkManagerGRPC.shared.stop();
@@ -187,7 +187,7 @@ void main() {
     var reconnect = await callback.waitConn();
     L.i("reconnect is $reconnect");
     await Future.delayed(const Duration(milliseconds: 100));
-    await NetworkManagerGRPC.shared.ticker();
+    await NetworkManagerGRPC.shared.onTicker();
     var closed = await callback.waitConn();
     L.i("conn is $closed");
     await NetworkManagerGRPC.shared.stop();
@@ -202,7 +202,7 @@ void main() {
     L.i("conn is $ready");
     NetworkManagerGRPC.shared.client = null;
     NetworkManagerGRPC.shared.channel = null;
-    await NetworkManagerGRPC.shared.ticker();
+    await NetworkManagerGRPC.shared.onTicker();
     var reconnect = await callback.waitConn();
     L.i("reconnect is $reconnect");
     await NetworkManagerGRPC.shared.stop();
@@ -250,6 +250,6 @@ void main() {
     //
     NetworkManagerGRPC.shared.isClient = false;
     NetworkManagerGRPC.shared.service = null;
-    await NetworkManagerGRPC.shared.ticker();
+    await NetworkManagerGRPC.shared.onTicker();
   });
 }
