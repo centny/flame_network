@@ -89,7 +89,11 @@ mixin NetworkEvent {
   }
 
   Future<void> onNetworkUserConnected(NetworkConnection conn, String user, {Object? info}) async {}
+
   Future<void> onNetworkUserDisconnected(NetworkConnection conn, String user, {Object? info}) async {}
+
+  Future<void> onNetworkPing(NetworkConnection conn, Duration ping) async {}
+
   void unregisterFromNetworkManager() => NetworkManager.global.unregisterNetworkEvent(this);
 }
 
@@ -162,6 +166,20 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
   @override
   @mustCallSuper
   Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async => NetworkComponent.syncRecv(data.group, data.components, whole: data.whole);
+
+  Future<void> onNetworkPing(NetworkConnection conn, Duration ping) async {
+    var group = conn.session?.group ?? "";
+    await Future.forEach(_events.keys, (event) async {
+      var g = _events[event];
+      if (g == group || g == "*") {
+        try {
+          await event.onNetworkPing(conn, ping);
+        } catch (e, s) {
+          L.e("NetworkManager call network ping on group $g throw error $e\n$s");
+        }
+      }
+    });
+  }
 
   void registerNetworkEvent({required NetworkEvent event, String? group}) => _events[event] = group ?? "*";
 

@@ -40,6 +40,8 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
 
   bool autoZoom = true;
 
+  final TextComponent _pingShow = TextComponent(text: "-");
+
   FireGame({World? world, bool? autoZoom})
       : autoZoom = autoZoom ?? true,
         super(world: world ?? FireWorld()) {
@@ -117,6 +119,16 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   }
 
   @override
+  Future<void> onNetworkPing(NetworkConnection conn, Duration ping) async {
+    var ms = ping.inMilliseconds;
+    if (ms <= 0) {
+      _pingShow.text = ".....";
+    } else {
+      _pingShow.text = "${ping.inMilliseconds} ms";
+    }
+  }
+
+  @override
   Future<void> onNetworkUserDisconnected(NetworkConnection conn, String user, {Object? info}) async {
     if (isServer) {
       var player = players.remove(user);
@@ -160,6 +172,8 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
       _scale = Vector2(camera.visibleWorldRect.width / size.x, camera.visibleWorldRect.height / size.y);
     }
     camera.viewport.add(FpsTextComponent());
+    _pingShow.position = Vector2(8, camera.visibleWorldRect.height - 30);
+    camera.viewport.add(_pingShow);
 
     initSeat();
 

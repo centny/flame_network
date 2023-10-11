@@ -514,7 +514,7 @@ class NetworkManagerGRPC extends NetworkManager {
   bool _keeping = false;
 
   //
-  DateTime _pingShow = DateTime.now();
+  DateTime _pingShow = DateTime.fromMillisecondsSinceEpoch(0);
   int _pingCount = 0;
   Duration _pingSpeed = const Duration();
   @override
@@ -595,17 +595,30 @@ class NetworkManagerGRPC extends NetworkManager {
       return;
     }
     _keeping = true;
+    var pingOld = _pingSpeed;
     try {
       DateTime startTime = DateTime.now();
       await client!.ping(keepalive);
       _pingSpeed = DateTime.now().difference(startTime);
       _pingCount++;
+
+      //
       if (DateTime.now().difference(_pingShow) > const Duration(seconds: 60)) {
         L.i("[GRPC] ping to server $_pingCount count success, last spedd $_pingSpeed");
         _pingCount = 0;
         _pingShow = DateTime.now();
       }
+
+      //
+      if (_pingSpeed != pingOld) {
+        onNetworkPing(client!, _pingSpeed);
+      }
     } catch (e) {
+      _pingSpeed = Duration.zero;
+      if (_pingSpeed != pingOld) {
+        onNetworkPing(client!, _pingSpeed);
+      }
+
       L.w("[GRPC] ping to $channel throw error with $e");
       try {
         await client?.stopMonitorSync();

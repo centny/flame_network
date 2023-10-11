@@ -120,6 +120,49 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
   }
 }
 
+class TestNetworkErr with NetworkComponent, NetworkEvent {
+  @override
+  String get nCID => "a1";
+
+  @override
+  String get nFactory => "err";
+
+  @override
+  bool get nRemoved => false;
+
+  NetworkProp<int> sErr = NetworkProp<int>("err", 0);
+  NetworkCall<void, int> cErr = NetworkCall("err");
+
+  TestNetworkErr() {
+    registerNetworkProp(sErr);
+    registerNetworkCall(cErr, testErr);
+    registerNetworkEvent(event: this);
+  }
+
+  void unregister() {
+    unregisterNetworkProp(sErr);
+    unregisterNetworkCall(cErr);
+    unregisterNetworkEvent(this);
+  }
+
+  Future<void> testErr(NetworkSession? ctx, String uuid, int v) async {
+    throw Exception("error");
+  }
+
+  @override
+  void onNetworkRemove() {}
+
+  @override
+  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) {
+    throw Exception("state error");
+  }
+
+  @override
+  Future<void> onNetworkPing(NetworkConnection conn, Duration ping) {
+    throw Exception("ping error");
+  }
+}
+
 class TestNetworkConnection with NetworkConnection {
   bool syncError = false;
   @override
@@ -194,10 +237,22 @@ void main() {
   test('NetworkEvent.event', () async {
     var m = TestNetworkManager();
     m.session.user = "123";
+    //
     var nc = TestNetworkComponent();
     await m.onNetworkState(HashSet.from([m.conn]), m.conn, NetworkState.ready);
     await m.onNetworkState(HashSet(), m.conn, NetworkState.closed);
+    await m.onNetworkPing(m.conn, const Duration(seconds: 1));
+    assert(m.pingSpeed == const Duration());
     nc.unregister();
+    //
+    var ne = TestNetworkErr();
+    try {
+      await m.onNetworkState(HashSet.from([m.conn]), m.conn, NetworkState.ready);
+    } catch (_) {}
+    try {
+      await m.onNetworkPing(m.conn, const Duration(seconds: 1));
+    } catch (_) {}
+    ne.unregister();
   });
   test('NetworkCall.call', () async {
     var m = TestNetworkManager();
@@ -227,6 +282,14 @@ void main() {
     } catch (_) {}
 
     nc.unregister();
+
+    //
+    var ne = TestNetworkErr();
+    try {
+      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: ne.nCID, nName: "err", nArg: "100"));
+      assert(false);
+    } catch (_) {}
+    ne.unregister();
   });
   test('NetworkComponent.create', () async {
     NetworkComponent.onAdd = (p0) => L.i("add ->${p0.nCID}");
@@ -237,6 +300,8 @@ void main() {
     assert(NetworkComponent.findComponent(nc.nCID) == null);
   });
   test('NetworkComponent.prop', () async {
+    var m = TestNetworkManager();
+    m.session.user = "u123";
     var nc = TestNetworkComponent();
 
     var props = nc.checkNetworkProp();
@@ -254,6 +319,14 @@ void main() {
     nc.updateNetworkProp(props);
 
     nc.unregister();
+
+    //
+    var ne = TestNetworkErr();
+    try {
+      ne.updateNetworkProp({"err": 100});
+      assert(false);
+    } catch (_) {}
+    ne.unregister();
   });
   test('NetworkComponent.sync', () async {
     var cb = TestNetworkManager();
