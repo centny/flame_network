@@ -439,7 +439,11 @@ mixin NetworkComponent {
         L.w("NetworkComponent($nFactory,$nCID) prop $name is not exists");
         continue;
       }
-      prop.decode(updated[name]);
+      try {
+        prop.decode(updated[name]);
+      } catch (e, s) {
+        L.e("NetworkComponent($nFactory,$nCID) update network prop ${prop.name} throw error $e\n$s");
+      }
     }
   }
 
@@ -517,7 +521,12 @@ mixin NetworkComponent {
     if (call == null) {
       throw Exception("NetworkComponent(${arg.nCID}) call ${arg.nName} is not exists");
     }
-    var result = await call.run(ctx, arg.uuid, arg.nArg);
-    return NetworkCallResult(uuid: arg.uuid, nCID: arg.nCID, nName: arg.nName, nResult: result);
+    try {
+      var result = await call.run(ctx, arg.uuid, arg.nArg);
+      return NetworkCallResult(uuid: arg.uuid, nCID: arg.nCID, nName: arg.nName, nResult: result);
+    } catch (e, s) {
+      L.e("NetworkComponent(${c.nFactory},${c.nCID}) call ${call.name} throw error $e\n$s");
+      rethrow;
+    }
   }
 }

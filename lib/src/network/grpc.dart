@@ -253,7 +253,7 @@ class NetworkServerGRPC extends ServerServiceBase {
       var result = await callback.onNetworkCall(conn, arg);
       return result.wrap();
     } catch (e, s) {
-      L.w("[GRPC] network call by $arg fail with $e\n$s");
+      L.w("[GRPC] network call by $arg throw error $e\n$s");
       return CallResult(id: request.id, cid: request.cid, name: request.name, error: "$e");
     }
   }
@@ -312,7 +312,7 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
     try {
       await callback.onNetworkSync(conn, data);
     } catch (e, s) {
-      L.e("[GRPC] network sync fail with $e\n$s");
+      L.e("[GRPC] network sync throw error $e\n$s");
     }
   }
 
@@ -577,7 +577,7 @@ class NetworkManagerGRPC extends NetworkManager {
         await keep();
       }
     } catch (e) {
-      L.e("[GRPC] ticker proc fail with $e");
+      L.e("[GRPC] ticker proc throw error with $e");
     }
   }
 
@@ -585,7 +585,7 @@ class NetworkManagerGRPC extends NetworkManager {
     try {
       await client!.ping(keepalive);
     } catch (e) {
-      L.w("[GRPC] ping to $channel fail with $e");
+      L.w("[GRPC] ping to $channel throw error with $e");
       try {
         await client?.stopMonitorSync();
         await channel?.shutdown();
