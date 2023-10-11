@@ -591,7 +591,7 @@ class NetworkManagerGRPC extends NetworkManager {
         await channel?.shutdown();
       } catch (_) {}
       try {
-        reconnect();
+        await reconnect();
       } catch (_) {}
     }
   }
