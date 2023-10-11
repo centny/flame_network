@@ -33,18 +33,17 @@ class LoginMenu extends StatefulWidget {
 }
 
 class LoginMenuState extends State<LoginMenu> {
-  final TextEditingController account = TextEditingController();
   final TextEditingController username = TextEditingController();
   String showMessage = "";
 
   void onStart() async {
     if (NetworkManagerGRPC.shared.isClient) {
-      if ((account.text.isEmpty || username.text.isEmpty)) {
+      if (username.text.isEmpty) {
         return;
       }
       NetworkManagerGRPC.shared.session.session = const Uuid().v1();
       NetworkManagerGRPC.shared.session.group = widget.game.nGroup;
-      NetworkManagerGRPC.shared.session.user = account.text;
+      NetworkManagerGRPC.shared.session.user = username.text;
     }
 
     await NetworkManagerGRPC.shared.start();
@@ -74,14 +73,6 @@ class LoginMenuState extends State<LoginMenu> {
     List<Widget> loginItems = [];
     if (NetworkManager.global.isClient) {
       loginItems = [
-        TextField(
-          controller: account,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: 'Enter a account',
-          ),
-        ),
-        const SizedBox(height: 20),
         TextField(
           controller: username,
           decoration: const InputDecoration(
