@@ -67,7 +67,7 @@ mixin NetworkCallback {
 mixin NetworkTransport {
   NetworkSession session = NetworkSession.create();
   Duration keepalive = const Duration(seconds: 3);
-  Duration timeout = const Duration(seconds: 10);
+  Duration timeout = const Duration(seconds: 5);
   late NetworkCallback callback;
   bool isServer = false;
   bool isClient = false;
@@ -108,6 +108,8 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
 
   String? get user => session.user;
   final Map<NetworkEvent, String> _events = {};
+
+  Duration get pingSpeed => const Duration();
 
   NetworkManager() {
     _global = this;

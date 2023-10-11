@@ -511,6 +511,14 @@ class NetworkManagerGRPC extends NetworkManager {
   HandledServerGRPC? server;
   NetworkServerGRPC? service;
   NetworkClientGRPC? client;
+  bool _keeping = false;
+
+  //
+  DateTime _pingShow = DateTime.now();
+  int _pingCount = 0;
+  Duration _pingSpeed = const Duration();
+  @override
+  Duration get pingSpeed => _pingSpeed;
 
   NetworkManagerGRPC();
 
@@ -566,7 +574,7 @@ class NetworkManagerGRPC extends NetworkManager {
   }
 
   Future<void> _ticker() async {
-    timer = Timer.periodic(const Duration(seconds: 1), (t) => onTicker());
+    timer = Timer.periodic(const Duration(seconds: 3), (t) => onTicker());
   }
 
   Future<void> onTicker() async {
@@ -583,8 +591,20 @@ class NetworkManagerGRPC extends NetworkManager {
   }
 
   Future<void> keep() async {
+    if (_keeping) {
+      return;
+    }
+    _keeping = true;
     try {
+      DateTime startTime = DateTime.now();
       await client!.ping(keepalive);
+      _pingSpeed = DateTime.now().difference(startTime);
+      _pingCount++;
+      if (DateTime.now().difference(_pingShow) > const Duration(seconds: 60)) {
+        L.i("[GRPC] ping to server $_pingCount count success, last spedd $_pingSpeed");
+        _pingCount = 0;
+        _pingShow = DateTime.now();
+      }
     } catch (e) {
       L.w("[GRPC] ping to $channel throw error with $e");
       try {
@@ -595,6 +615,7 @@ class NetworkManagerGRPC extends NetworkManager {
         await reconnect();
       } catch (_) {}
     }
+    _keeping = false;
   }
 
   Future<void> start() async {
