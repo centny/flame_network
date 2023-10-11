@@ -7,16 +7,16 @@ import '../common/log.dart';
 import '../network/network.dart';
 
 mixin NetworkGame on FlameGame {
-  String get group => "*";
+  String get nGroup => "*";
 
   @override
   @mustCallSuper
   void update(double dt) async {
     super.update(dt);
     try {
-      await NetworkManager.global.sync(group);
+      await NetworkManager.global.sync(nGroup);
     } catch (e, s) {
-      L.w("NetworkGame($group) sync fail with $e\n$s");
+      L.w("NetworkGame($nGroup) sync fail with $e\n$s");
     }
   }
 }

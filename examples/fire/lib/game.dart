@@ -43,16 +43,16 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   FireGame({World? world, bool? autoZoom})
       : autoZoom = autoZoom ?? true,
         super(world: world ?? FireWorld()) {
-    NetworkComponent.registerFactory(group: group, creator: onNetworkCreate);
+    NetworkComponent.registerFactory(group: nGroup, creator: onNetworkCreate);
     registerNetworkCall(nJoin, onPlayerJoin);
     registerNetworkEvent(event: this);
   }
 
   @override
-  String get group => "group-0";
+  String get nGroup => "group-0";
 
   @override
-  String get nCID => group;
+  String get nCID => nGroup;
 
   @override
   String get nFactory => "";
@@ -106,13 +106,13 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     if (seat < 0) {
       return "Seat Full";
     }
-    var player = Player(group: group, cid: const Uuid().v1())
+    var player = Player(group: nGroup, cid: const Uuid().v1())
       ..nName.value = name
       ..nOwner = owner
       ..nSeat.value = seat;
     players[owner] = player;
     world.add(player);
-    L.i("Game($group) player $owner/$name join game on $group");
+    L.i("Game($nGroup) player $owner/$name join game on $nGroup");
     return "OK";
   }
 
@@ -120,7 +120,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   Future<void> onNetworkUserDisconnected(NetworkConnection conn, String user, {Object? info}) async {
     var player = players.remove(user);
     if (player != null) {
-      player.remove(player);
+      player.removeFromParent();
       releaseSeat(player.nSeat.value);
     }
   }
@@ -276,7 +276,7 @@ class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    add(CircleHitbox(anchor: Anchor.center, position: size / 2, radius: radius * 1)..renderShape = true);
+    add(CircleHitbox(anchor: Anchor.center, position: size / 2, radius: radius * 1));
   }
 
   @override
@@ -364,13 +364,14 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
     weaponView.position = seatView.position = Vector2(width / 2, height / 2);
     add(weaponView);
     add(seatView);
+    L.i("Game($nGroup) player(owner:$nOwner,$nCID) is loaded");
     if (isOwner) {
       current = this;
     }
   }
 
   Bullet _createBullet() {
-    var b = Bullet(group: game.group);
+    var b = Bullet(group: game.nGroup);
     b.nPosition.value = position + nWeaponDirect.value * weaponView.height;
     b.nDirect.value = nWeaponDirect.value;
     b.nColor.value = weaponView.paint.color;

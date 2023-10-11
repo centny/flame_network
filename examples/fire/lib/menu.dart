@@ -1,5 +1,6 @@
 import 'package:flame_network/flame_network.dart';
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import 'game.dart';
 import 'log.dart';
@@ -41,7 +42,8 @@ class LoginMenuState extends State<LoginMenu> {
       if ((account.text.isEmpty || username.text.isEmpty)) {
         return;
       }
-      NetworkManagerGRPC.shared.session.group = widget.game.group;
+      NetworkManagerGRPC.shared.session.session = const Uuid().v1();
+      NetworkManagerGRPC.shared.session.group = widget.game.nGroup;
       NetworkManagerGRPC.shared.session.user = account.text;
     }
 
@@ -51,13 +53,13 @@ class LoginMenuState extends State<LoginMenu> {
       var name = username.text;
       var res = await widget.game.join(username.text);
       if (res != "OK") {
-        L.i("Game(${widget.game.group}) $name join fail with $res");
+        L.i("Game(${widget.game.nGroup}) $name join fail with $res");
         setState(() {
           showMessage = res;
         });
         return;
       }
-      L.i("Game(${widget.game.group}) $name join success");
+      L.i("Game(${widget.game.nGroup}) $name join success");
     }
 
     widget.game.overlays.remove('LoginMenu');
