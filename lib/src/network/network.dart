@@ -6,8 +6,6 @@ import 'package:uuid/uuid.dart';
 
 import '../common/log.dart';
 
-class NetworkPool {}
-
 class NetworkSession {
   Map<String, String> value;
 
@@ -95,6 +93,32 @@ mixin NetworkEvent {
   Future<void> onNetworkPing(NetworkConnection conn, Duration ping) async {}
 
   void unregisterFromNetworkManager() => NetworkManager.global.unregisterNetworkEvent(this);
+}
+
+class NetworkSyncDataComponent {
+  String nFactory;
+  String nCID;
+  String? nOwner;
+  bool? nRemoved;
+  Map<String, dynamic>? nProps = {};
+
+  NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nOwner, this.nRemoved, this.nProps});
+}
+
+class NetworkSyncData {
+  String uuid;
+  String group = "*";
+  bool? whole; // if components container all NetworkComponents, if true client should remove NetworkComponents which is not in components
+
+  List<NetworkSyncDataComponent> components;
+
+  bool get isUpdated => components.isNotEmpty || (whole ?? false);
+
+  NetworkSyncData({required this.uuid, required this.group, this.whole, required this.components});
+
+  factory NetworkSyncData.create({List<NetworkSyncDataComponent>? components, bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: "*", whole: whole, components: components ?? List.empty(growable: true));
+
+  factory NetworkSyncData.syncSend(group, {bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: group, whole: whole, components: NetworkComponent.syncSend(group, whole: whole));
 }
 
 abstract class NetworkManager with NetworkTransport, NetworkCallback {
@@ -207,32 +231,6 @@ class NetworkCallResult {
   String nResult;
 
   NetworkCallResult({required this.uuid, required this.nCID, required this.nName, required this.nResult});
-}
-
-class NetworkSyncDataComponent {
-  String nFactory;
-  String nCID;
-  String? nOwner;
-  bool? nRemoved;
-  Map<String, dynamic>? nProps = {};
-
-  NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nOwner, this.nRemoved, this.nProps});
-}
-
-class NetworkSyncData {
-  String uuid;
-  String group = "*";
-  bool? whole; // if components container all NetworkComponents, if true client should remove NetworkComponents which is not in components
-
-  List<NetworkSyncDataComponent> components;
-
-  bool get isUpdated => components.isNotEmpty || (whole ?? false);
-
-  NetworkSyncData({required this.uuid, required this.group, this.whole, required this.components});
-
-  factory NetworkSyncData.create({List<NetworkSyncDataComponent>? components, bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: "*", whole: whole, components: components ?? List.empty(growable: true));
-
-  factory NetworkSyncData.syncSend(group, {bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: group, whole: whole, components: NetworkComponent.syncSend(group, whole: whole));
 }
 
 mixin NetworkValue {
