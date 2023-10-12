@@ -198,7 +198,7 @@ class NetworkServerGRPC extends ServerServiceBase {
   void networkSync(NetworkSyncData data) {
     var components = data.components.map((e) => e.wrap());
     for (var conn in _sessionConnGroup(data.group)) {
-      var syncData = SyncData(id: newRequestID(), group: data.group, whole: data.whole, components: components);
+      var syncData = SyncData(id: newRequestID(), group: conn.session?.group ?? data.group, whole: data.whole, components: components);
       conn.add(syncData);
     }
   }
