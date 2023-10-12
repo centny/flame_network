@@ -19,18 +19,18 @@ import 'server.pb.dart' as $0;
 
 export 'server.pb.dart';
 
-@$pb.GrpcServiceName('Server')
+@$pb.GrpcServiceName('grpc.Server')
 class ServerClient extends $grpc.Client {
   static final _$remotePing = $grpc.ClientMethod<$0.PingArg, $0.PingResult>(
-      '/Server/remotePing',
+      '/grpc.Server/remotePing',
       ($0.PingArg value) => value.writeToBuffer(),
       ($core.List<$core.int> value) => $0.PingResult.fromBuffer(value));
   static final _$remoteSync = $grpc.ClientMethod<$0.SyncArg, $0.SyncData>(
-      '/Server/remoteSync',
+      '/grpc.Server/remoteSync',
       ($0.SyncArg value) => value.writeToBuffer(),
       ($core.List<$core.int> value) => $0.SyncData.fromBuffer(value));
   static final _$remoteCall = $grpc.ClientMethod<$0.CallArg, $0.CallResult>(
-      '/Server/remoteCall',
+      '/grpc.Server/remoteCall',
       ($0.CallArg value) => value.writeToBuffer(),
       ($core.List<$core.int> value) => $0.CallResult.fromBuffer(value));
 
@@ -53,9 +53,9 @@ class ServerClient extends $grpc.Client {
   }
 }
 
-@$pb.GrpcServiceName('Server')
+@$pb.GrpcServiceName('grpc.Server')
 abstract class ServerServiceBase extends $grpc.Service {
-  $core.String get $name => 'Server';
+  $core.String get $name => 'grpc.Server';
 
   ServerServiceBase() {
     $addMethod($grpc.ServiceMethod<$0.PingArg, $0.PingResult>(

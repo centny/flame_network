@@ -29,27 +29,27 @@ final $typed_data.Uint8List requestIDDescriptor = $convert.base64Decode(
 const PingArg$json = {
   '1': 'PingArg',
   '2': [
-    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.grpc.RequestID', '10': 'id'},
   ],
 };
 
 /// Descriptor for `PingArg`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List pingArgDescriptor = $convert.base64Decode(
-    'CgdQaW5nQXJnEhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZA==');
+    'CgdQaW5nQXJnEh8KAmlkGAEgASgLMg8uZ3JwYy5SZXF1ZXN0SURSAmlk');
 
 @$core.Deprecated('Use pingResultDescriptor instead')
 const PingResult$json = {
   '1': 'PingResult',
   '2': [
-    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.grpc.RequestID', '10': 'id'},
     {'1': 'serverTime', '3': 2, '4': 1, '5': 3, '10': 'serverTime'},
   ],
 };
 
 /// Descriptor for `PingResult`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List pingResultDescriptor = $convert.base64Decode(
-    'CgpQaW5nUmVzdWx0EhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZBIeCgpzZXJ2ZXJUaW1lGA'
-    'IgASgDUgpzZXJ2ZXJUaW1l');
+    'CgpQaW5nUmVzdWx0Eh8KAmlkGAEgASgLMg8uZ3JwYy5SZXF1ZXN0SURSAmlkEh4KCnNlcnZlcl'
+    'RpbWUYAiABKANSCnNlcnZlclRpbWU=');
 
 @$core.Deprecated('Use syncDataComponentDescriptor instead')
 const SyncDataComponent$json = {
@@ -73,36 +73,36 @@ final $typed_data.Uint8List syncDataComponentDescriptor = $convert.base64Decode(
 const SyncArg$json = {
   '1': 'SyncArg',
   '2': [
-    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.grpc.RequestID', '10': 'id'},
   ],
 };
 
 /// Descriptor for `SyncArg`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List syncArgDescriptor = $convert.base64Decode(
-    'CgdTeW5jQXJnEhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZA==');
+    'CgdTeW5jQXJnEh8KAmlkGAEgASgLMg8uZ3JwYy5SZXF1ZXN0SURSAmlk');
 
 @$core.Deprecated('Use syncDataDescriptor instead')
 const SyncData$json = {
   '1': 'SyncData',
   '2': [
-    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.grpc.RequestID', '10': 'id'},
     {'1': 'group', '3': 2, '4': 1, '5': 9, '10': 'group'},
     {'1': 'whole', '3': 3, '4': 1, '5': 8, '10': 'whole'},
-    {'1': 'components', '3': 4, '4': 3, '5': 11, '6': '.SyncDataComponent', '10': 'components'},
+    {'1': 'components', '3': 4, '4': 3, '5': 11, '6': '.grpc.SyncDataComponent', '10': 'components'},
   ],
 };
 
 /// Descriptor for `SyncData`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List syncDataDescriptor = $convert.base64Decode(
-    'CghTeW5jRGF0YRIaCgJpZBgBIAEoCzIKLlJlcXVlc3RJRFICaWQSFAoFZ3JvdXAYAiABKAlSBW'
-    'dyb3VwEhQKBXdob2xlGAMgASgIUgV3aG9sZRIyCgpjb21wb25lbnRzGAQgAygLMhIuU3luY0Rh'
-    'dGFDb21wb25lbnRSCmNvbXBvbmVudHM=');
+    'CghTeW5jRGF0YRIfCgJpZBgBIAEoCzIPLmdycGMuUmVxdWVzdElEUgJpZBIUCgVncm91cBgCIA'
+    'EoCVIFZ3JvdXASFAoFd2hvbGUYAyABKAhSBXdob2xlEjcKCmNvbXBvbmVudHMYBCADKAsyFy5n'
+    'cnBjLlN5bmNEYXRhQ29tcG9uZW50Ugpjb21wb25lbnRz');
 
 @$core.Deprecated('Use callArgDescriptor instead')
 const CallArg$json = {
   '1': 'CallArg',
   '2': [
-    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.grpc.RequestID', '10': 'id'},
     {'1': 'cid', '3': 2, '4': 1, '5': 9, '10': 'cid'},
     {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
     {'1': 'arg', '3': 4, '4': 1, '5': 9, '10': 'arg'},
@@ -111,14 +111,14 @@ const CallArg$json = {
 
 /// Descriptor for `CallArg`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List callArgDescriptor = $convert.base64Decode(
-    'CgdDYWxsQXJnEhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZBIQCgNjaWQYAiABKAlSA2NpZB'
-    'ISCgRuYW1lGAMgASgJUgRuYW1lEhAKA2FyZxgEIAEoCVIDYXJn');
+    'CgdDYWxsQXJnEh8KAmlkGAEgASgLMg8uZ3JwYy5SZXF1ZXN0SURSAmlkEhAKA2NpZBgCIAEoCV'
+    'IDY2lkEhIKBG5hbWUYAyABKAlSBG5hbWUSEAoDYXJnGAQgASgJUgNhcmc=');
 
 @$core.Deprecated('Use callResultDescriptor instead')
 const CallResult$json = {
   '1': 'CallResult',
   '2': [
-    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.RequestID', '10': 'id'},
+    {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.grpc.RequestID', '10': 'id'},
     {'1': 'cid', '3': 2, '4': 1, '5': 9, '10': 'cid'},
     {'1': 'name', '3': 3, '4': 1, '5': 9, '10': 'name'},
     {'1': 'result', '3': 4, '4': 1, '5': 9, '10': 'result'},
@@ -128,7 +128,7 @@ const CallResult$json = {
 
 /// Descriptor for `CallResult`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List callResultDescriptor = $convert.base64Decode(
-    'CgpDYWxsUmVzdWx0EhoKAmlkGAEgASgLMgouUmVxdWVzdElEUgJpZBIQCgNjaWQYAiABKAlSA2'
-    'NpZBISCgRuYW1lGAMgASgJUgRuYW1lEhYKBnJlc3VsdBgEIAEoCVIGcmVzdWx0EhQKBWVycm9y'
-    'GAUgASgJUgVlcnJvcg==');
+    'CgpDYWxsUmVzdWx0Eh8KAmlkGAEgASgLMg8uZ3JwYy5SZXF1ZXN0SURSAmlkEhAKA2NpZBgCIA'
+    'EoCVIDY2lkEhIKBG5hbWUYAyABKAlSBG5hbWUSFgoGcmVzdWx0GAQgASgJUgZyZXN1bHQSFAoF'
+    'ZXJyb3IYBSABKAlSBWVycm9y');
 

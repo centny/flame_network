@@ -1,4 +1,6 @@
 syntax = "proto3";
+option go_package = "github.com/centny/flame_network/lib/src/network/grpc";
+package grpc;
 
 message RequestID { string uuid = 1; }
 
