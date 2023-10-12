@@ -22,11 +22,8 @@ void main() {
       break;
     default:
       NetworkManagerGRPC.shared.isClient = true;
-      NetworkManagerGRPC.shared.isServer = !kIsWeb;
+      NetworkManagerGRPC.shared.isServer = false;
       break;
-  }
-  if (NetworkManagerGRPC.shared.isClient) {
-    NetworkManagerGRPC.shared.session.user = "123";
   }
   // NetworkComponent.registerFactory(
   //   key: "*",

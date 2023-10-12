@@ -134,6 +134,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     if (isServer) {
       var player = players.remove(user);
       if (player != null) {
+        L.i("Game($nGroup) player $user/${player.nName.value} leave game on $nGroup");
         player.removeFromParent();
         releaseSeat(player.nSeat.value);
       }
