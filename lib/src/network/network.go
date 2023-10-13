@@ -9,6 +9,7 @@ import (
 
 	"github.com/codingeasygo/util/converter"
 	"github.com/codingeasygo/util/uuid"
+	"github.com/codingeasygo/util/xdebug"
 	"github.com/codingeasygo/util/xmap"
 )
 
@@ -465,6 +466,12 @@ func (n *NetworkComponent) NetworkCall(name string, arg interface{}, ret interfa
 }
 
 func (n *NetworkComponent) CallNetworkCall(ctx *NetworkSession, arg *NetworkCallArg) (ret *NetworkCallResult, err error) {
+	defer func() {
+		if perr := recover(); perr != nil {
+			Errorf("NetworkComponent(%v/%v) call NetworkCall %v panic with\nArg:%v\nStack:\n%v\n%v", n.Factory, n.CID, arg.Name, converter.JSON(arg), perr, xdebug.CallStack())
+			err = fmt.Errorf("%v", perr)
+		}
+	}()
 	call := n.findNetworkCall(arg.Name)
 	if call == nil {
 		err = fmt.Errorf("NetworkComponent(%v) call %v is not exists", arg.CID, arg.Name)
