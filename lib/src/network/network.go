@@ -318,9 +318,6 @@ type NetworkComponent struct {
 	CID             string
 	Owner           string
 	Removed         bool
-	Updated         bool
-	IsServer        bool
-	IsClient        bool
 	OnNetworkRemove func()
 	OnPropUpdate    map[string]NetworkPropUpdate
 	Refer           interface{}
@@ -340,6 +337,14 @@ func NewNetworkComponent(factory, group, cid string) (c *NetworkComponent) {
 	c.propAll.OnUpdate = c.onPropUpdate
 	c.SafeM = xmap.NewSafeByBase(c.propAll)
 	return
+}
+
+func (n *NetworkComponent) IsServer() bool {
+	return Network.IsServer
+}
+
+func (n *NetworkComponent) IsClient() bool {
+	return Network.IsClient
 }
 
 func (n *NetworkComponent) IsOwner() bool {
