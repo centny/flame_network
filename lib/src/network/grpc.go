@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/codingeasygo/util/xmap"
 	"github.com/codingeasygo/util/xtime"
 	ggrpc "google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
@@ -514,6 +516,8 @@ type NetworkTransportGRPC struct {
 	WebServer    *http.Server
 	GrpcListener net.Listener
 	WebListener  net.Listener
+	ServerConfig *tls.Config
+	ConnConfig   *tls.Config
 	running      bool
 	exiter       chan int
 	waiter       sync.WaitGroup
@@ -557,7 +561,11 @@ func (n *NetworkTransportGRPC) connect() (err error) {
 		}
 		ctx, cancel := context.WithTimeout(NewOutgoingContext(context.Background(), Network.NetworkSession), Network.Timeout)
 		defer cancel()
-		connection, xerr := ggrpc.DialContext(ctx, n.GrpcAddress.Host, n.GrpcOpts...)
+		opts := n.GrpcOpts
+		if n.ConnConfig != nil {
+			opts = append(opts, ggrpc.WithTransportCredentials(credentials.NewTLS(n.ConnConfig)))
+		}
+		connection, xerr := ggrpc.DialContext(ctx, n.GrpcAddress.Host, opts...)
 		if xerr != nil {
 			err = xerr
 			return
@@ -605,10 +613,19 @@ func (n *NetworkTransportGRPC) procKeep() {
 	}
 }
 
+func (n *NetworkTransportGRPC) createListener(host string) (ln net.Listener, err error) {
+	if n.ServerConfig == nil {
+		ln, err = net.Listen("tcp", host)
+	} else {
+		ln, err = tls.Listen("tcp", host, n.ServerConfig)
+	}
+	return
+}
+
 func (n *NetworkTransportGRPC) Start() (err error) {
 	if Network.IsServer {
 		if n.GrpcOn {
-			n.GrpcListener, err = net.Listen("tcp", n.GrpcAddress.Host)
+			n.GrpcListener, err = n.createListener(n.GrpcAddress.Host)
 			if err != nil {
 				return
 			}
@@ -617,7 +634,7 @@ func (n *NetworkTransportGRPC) Start() (err error) {
 			n.running = true
 		}
 		if n.WebOn {
-			n.WebListener, err = net.Listen("tcp", n.WebAddress.Host)
+			n.WebListener, err = n.createListener(n.WebAddress.Host)
 			if err != nil {
 				return
 			}

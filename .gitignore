@@ -30,3 +30,9 @@ migrate_working_dir/
 build/
 coverage
 examples/fire/fire
+lib/src/network/ca.key
+lib/src/network/ca.pem
+lib/src/network/client.key
+lib/src/network/client.pem
+lib/src/network/server.key
+lib/src/network/server.pem

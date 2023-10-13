@@ -2,12 +2,15 @@ package network
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/centny/flame_network/lib/src/network/grpc"
+	"github.com/codingeasygo/util/xcrypto"
 	"github.com/codingeasygo/util/xdebug"
 	"github.com/codingeasygo/util/xmap"
 	ggrpc "google.golang.org/grpc"
@@ -63,6 +66,30 @@ func TestGRPC(t *testing.T) {
 		transport.Server.timeout(10 * time.Millisecond)
 
 		Network.Stop()
+	}
+	if tester.Run() { //NetworkManager.tls
+		xcrypto.GenerateWebServerClient("test.loc", "test.loc", "test.loc", "127.0.0.1", 2048)
+		_, _, rootCertPEM, rootKeyPEM, _, severCertPEM, serverKeyPEM, _, clientCertPEM, clientKeyPEM, _ := xcrypto.GenerateWebServerClient("test.loc", "test.loc", "test.loc", "127.0.0.1", 2048)
+		os.WriteFile("ca.pem", rootCertPEM, os.ModePerm)
+		os.WriteFile("ca.key", rootKeyPEM, os.ModePerm)
+		os.WriteFile("server.pem", severCertPEM, os.ModePerm)
+		os.WriteFile("server.key", serverKeyPEM, os.ModePerm)
+		os.WriteFile("client.pem", clientCertPEM, os.ModePerm)
+		os.WriteFile("client.key", clientKeyPEM, os.ModePerm)
+		cer, err := tls.LoadX509KeyPair("server.pem", "server.key")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		n := NewNetworkTransportGRPC()
+		n.ServerConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
+		n.ConnConfig = &tls.Config{InsecureSkipVerify: true}
+		err = n.Start()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		n.Stop()
 	}
 	if tester.Run() { //cover 1
 		s := NetworkSessionValueGRPC{}
