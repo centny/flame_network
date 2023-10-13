@@ -29,10 +29,7 @@ func NewNetworkSession(value xmap.Valuable) (session *NetworkSession) {
 }
 
 func NewNetworkSessionBySafeM() (session *NetworkSession) {
-	session = &NetworkSession{
-		Valuable: xmap.NewSafe(),
-		Last:     time.Now(),
-	}
+	session = NewNetworkSession(xmap.NewSafe())
 	return
 }
 

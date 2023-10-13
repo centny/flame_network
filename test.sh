@@ -1,4 +1,7 @@
 
+
+mkdir -p coverage
+
 if [ "$1" == "" ];then
     flutter test --coverage $1
 else
@@ -11,18 +14,18 @@ pkgs="\
  github.com/centny/flame_network/lib/src/network\
 "
 export EMALL_DEBUG=1
-echo "mode: set" > build/all.cov
+echo "mode: set" > coverage/all.cov
 for p in $pkgs;
 do
  if [ "$1" = "-u" ];then
   go get -u $p
  fi
- go test -v -timeout 20m -covermode count --coverprofile=build/c.cov $p
- cat build/c.cov | grep -v "mode" >> build/all.cov
+ go test -v -timeout 20m -covermode count --coverprofile=coverage/c.cov $p
+ cat coverage/c.cov | grep -v "mode" >> coverage/all.cov
 done
 
-gocov convert build/all.cov > build/coverage.json
-cat build/all.cov | sed 's/sxbastudio.com\/emall\/emservice\///' > build/coverage.cov
-cat build/coverage.json | gocov-html > build/coverage.html
-cat build/coverage.cov | gocover-cobertura > build/coverage.xml
-go tool cover -func build/all.cov | grep total
+gocov convert coverage/all.cov > coverage/gocov.json
+cat coverage/all.cov | sed 's/github.com\/centny\/flame_network\///' > coverage/gocov.cov
+cat coverage/gocov.json | gocov-html > coverage/gocov.html
+cat coverage/gocov.cov | gocover-cobertura > coverage/gocov.xml
+go tool cover -func coverage/all.cov | grep total

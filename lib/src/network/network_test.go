@@ -36,6 +36,7 @@ func NewTestNetworkComponent() (c *TestNetworkComponent) {
 	c.OnPropUpdate["p0"] = c.onPropAll
 	c.SetValue("p0", 123)
 	c.SetValue("p1", "abc")
+	c.RegisterNetworkProp()
 	c.RegisterNetworkCall("c0", c.onCall0)
 	c.RegisterNetworkCall("c1", c.onCall1)
 	c.RegisterNetworkCall("c2", c.onCall2)
@@ -95,6 +96,7 @@ func (t *TestNetworkComponent) OnNetworkPing(conn NetworkConnection, ping time.D
 
 func (t *TestNetworkComponent) Unregister() {
 	t.Clear()
+	t.UnregisterNetworkProp()
 	t.UnregisterNetworkCall("c0")
 	t.ClearNetworkCall()
 	t.UnregisterNetworkEvent(t)
@@ -161,7 +163,7 @@ func (t *TestNetworkTransport) NetworkCall(arg *NetworkCallArg) (ret *NetworkCal
 func TestNetwork(t *testing.T) {
 	tester := xdebug.CaseTester{
 		0: 1,
-		3: 1,
+		5: 1,
 	}
 	Network.IsServer = true
 	Network.IsClient = true
@@ -355,6 +357,11 @@ func TestNetwork(t *testing.T) {
 
 		nc.Unregister()
 	}
+	if tester.Run() { //NetworkComponent.event
+		nc := NewTestNetworkComponent()
+		EventHub.OnNetworkPing(Network.Transport.(*TestNetworkTransport).conn, time.Second)
+		nc.Unregister()
+	}
 	if tester.Run() {
 		m := NewSyncMap()
 		m.SetValue("a", 123)
@@ -369,7 +376,12 @@ func TestNetwork(t *testing.T) {
 
 		nc := NewTestNetworkComponent()
 		nc.IsOwner()
+		nc.IsServer()
+		nc.IsClient()
 		nc.RegisterNetworkCall("c0", func() {})
 		nc.Unregister()
+
+		nc.SafeM = nil
+		nc.CallNetworkCall(nil, &NetworkCallArg{})
 	}
 }
