@@ -89,6 +89,7 @@ func TestGRPC(t *testing.T) {
 			},
 		}
 		data := ParseNetworkSyncDataGRPC(sd)
+		data.Components[0].Props["xxx"] = 1.1
 		ParseSyncDataGRPC(data)
 	}
 	if tester.Run() { //cover 3
@@ -154,8 +155,4 @@ func TestGRPC(t *testing.T) {
 		transport.running = true
 		transport.procKeep()
 	}
-}
-
-func TestPP(t *testing.T) {
-	fmt.Printf("abc-->%.02f\n", float64(0))
 }
