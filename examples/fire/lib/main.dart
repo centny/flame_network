@@ -1,6 +1,5 @@
 import 'package:flame/game.dart';
 import 'package:flame_network/flame_network.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'game.dart';

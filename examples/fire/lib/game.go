@@ -2,17 +2,62 @@ package lib
 
 import (
 	"fmt"
+	"math"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/centny/flame_network/lib/src/network"
-	"github.com/codingeasygo/util/converter"
 	"github.com/codingeasygo/util/uuid"
-	"github.com/quartercastle/vector"
 )
 
-type Vec = vector.Vector
+type Vec [2]float64
+
+func (v Vec) Sub(o Vec) Vec {
+	return Vec{v[0] - o[0], v[1] - o[1]}
+}
+
+func (v Vec) Add(o Vec) Vec {
+	return Vec{v[0] + o[0], v[1] + o[1]}
+}
+
+func (v Vec) Mul(s float64) Vec {
+	return Vec{v[0] * s, v[1] * s}
+}
+
+func (v Vec) Length() float64 {
+	return math.Sqrt(v[0]*v[0] + v[1]*v[1])
+}
+
+func (v Vec) Normalized() Vec {
+	s := 1.0 / v.Length()
+	return Vec{v[0] * s, v[1] * s}
+}
+
+func (v Vec) Cross(o Vec) float64 {
+	return v[0]*o[1] - v[1]*o[0]
+}
+
+func (v Vec) Dot(o Vec) float64 {
+	return v[0]*o[0] + v[1]*o[1]
+}
+
+func (v Vec) AngleTo(o Vec) float64 {
+	if v[0] == o[0] && v[1] == o[1] {
+		return 0.0
+	}
+	s := v.Cross(o)
+	c := v.Dot(o)
+	return math.Atan2(s, c)
+}
+
+func (v Vec) Reflect(o Vec) Vec {
+	return v.Sub(o.Mul(2.0 * o.Dot(v)))
+}
+
+func (v Vec) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("[%.02f,%0.02f]", v[0], v[1])), nil
+}
 
 func Run() {
 	runtime.LockOSThread()
@@ -28,7 +73,7 @@ func Run() {
 		case <-ticker.C:
 			now := time.Now().UnixNano()
 			// DT in ms
-			delta := float64(now-timeStart) / 1000000
+			delta := float64(now-timeStart) / 1000000000
 			timeStart = now
 			game.Update(delta)
 			network.Network.Sync(game.Group)
@@ -50,7 +95,9 @@ type FireGame struct {
 	Height       float64
 	seatUsed     [8]bool
 	seatPosition [8]Vec
+	weaponColors []int
 	playerAll    map[string]*Player
+	bulletAll    map[string]*Bullet
 	boss         *Boss
 	lock         sync.RWMutex
 }
@@ -64,103 +111,127 @@ func NewGame() (game *FireGame) {
 		NetworkComponent: network.NewNetworkComponent("", "group-0", "group-0"),
 		Width:            1280,
 		Height:           720,
+		weaponColors:     []int{0xFFFF4B91, 0xFFFFCD4B, 0xFFD6D46D, 0xFFF4DFB6, 0xFFDE8F5F, 0xFF9A4444},
 		playerAll:        map[string]*Player{},
+		bulletAll:        map[string]*Bullet{},
 		lock:             sync.RWMutex{},
 	}
 	game.initSeat()
-	game.boss = NewBoss(game, "boss")
+	game.boss = NewBoss(game, uuid.New())
 	game.RegisterNetworkCall("join", game.onPlayerJoin)
 	game.RegisterNetworkEvent(game.Group, game)
 	// network.ComponentHub.RegisterFactory("", game.Group, game.onNetworkCreate)
 	return
 }
 
-func (f *FireGame) initSeat() {
+func (g *FireGame) initSeat() {
 	for i := 0; i < 3; i++ {
-		var gap = (f.Width - 3*100) / 4
-		f.seatPosition[i] = Vec{-f.Width/2 + float64(i+1)*(gap+50), f.Height / 2}
+		var gap = (g.Width - 3*100) / 4
+		g.seatPosition[i] = Vec{-g.Width/2 + float64(i+1)*(gap+50), g.Height / 2}
 	}
 	for i := 0; i < 3; i++ {
-		var gap = (f.Width - 3*100) / 4
-		f.seatPosition[3+i] = Vec{-f.Width/2 + float64(i+1)*(gap+50), -f.Height / 2}
+		var gap = (g.Width - 3*100) / 4
+		g.seatPosition[3+i] = Vec{-g.Width/2 + float64(i+1)*(gap+50), -g.Height / 2}
 	}
-	f.seatPosition[6] = Vec{-f.Width / 2, 0}
-	f.seatPosition[7] = Vec{-f.Width / 2, 0}
+	g.seatPosition[6] = Vec{-g.Width / 2, 0}
+	g.seatPosition[7] = Vec{-g.Width / 2, 0}
 }
 
-func (f *FireGame) requestSeat() int {
+func (g *FireGame) requestSeat() int {
 	for i := 0; i < 8; i++ {
-		if !f.seatUsed[i] {
-			f.seatUsed[i] = true
+		if !g.seatUsed[i] {
+			g.seatUsed[i] = true
 			return i
 		}
 	}
 	return -1
 }
 
-func (f *FireGame) releaseSeat(seat int) {
-	f.seatUsed[seat] = false
+func (g *FireGame) releaseSeat(seat int) {
+	g.seatUsed[seat] = false
 }
 
-func (f *FireGame) onPlayerJoin(ctx *network.NetworkSession, _ string, name string) (result string, err error) {
+func (g *FireGame) onPlayerJoin(ctx *network.NetworkSession, _ string, name string) (result string, err error) {
 	owner := ctx.User()
 	if len(owner) < 1 || len(name) < 1 {
 		err = fmt.Errorf("user/name is required")
 		return
 	}
-	f.lock.Lock()
-	defer f.lock.Unlock()
+	g.lock.Lock()
+	defer g.lock.Unlock()
 
-	if f.playerAll[owner] != nil {
+	if g.playerAll[owner] != nil {
 		result = "OK"
 		return
 	}
-	seat := f.requestSeat()
+	seat := g.requestSeat()
 	if seat < 0 {
 		result = "Seat Full"
 		return
 	}
-	player := NewPlayer(f, uuid.New())
+	player := NewPlayer(g, uuid.New())
+	player.Position = g.seatPosition[seat]
 	player.SetName(name)
 	player.Owner = owner
 	player.SetSeat(seat)
-	f.playerAll[owner] = player
-	network.Infof("Game(%v) player %v/%v join game on %v", player.Group, owner, name, f.Group)
+	g.playerAll[owner] = player
+	network.Infof("Game(%v) player %v/%v join game on %v", player.Group, owner, name, g.Group)
 	result = "OK"
 	return
 }
 
-// func (f *FireGame) onNetworkCreate(key, group, id string) (c *network.NetworkComponent, err error) {
-// 	network.Infof("Game(%v) network create %v by %v", f.Group, key, id)
+// func (g *FireGame) onNetworkCreate(key, group, id string) (c *network.NetworkComponent, err error) {
+// 	network.Infof("Game(%v) network create %v by %v", g.Group, key, id)
 // 	err = fmt.Errorf("onNetworkCreate %v.%v is not supported", group, key)
 // 	return
 // }
 
-func (f *FireGame) OnNetworkState(all network.NetworkConnectionSet, conn network.NetworkConnection, state network.NetworkState, info interface{}) {
-	if f.IsServer && len(all) < 1 && (state == network.NetworkStateClosed || state == network.NetworkStateError) {
-		f.lock.Lock()
-		defer f.lock.Unlock()
+func (g *FireGame) OnNetworkState(all network.NetworkConnectionSet, conn network.NetworkConnection, state network.NetworkState, info interface{}) {
+	if g.IsServer() && len(all) < 1 && (state == network.NetworkStateClosed || state == network.NetworkStateError) {
+		g.lock.Lock()
+		defer g.lock.Unlock()
 		owner := conn.Session().User()
-		player := f.playerAll[owner]
+		player := g.playerAll[owner]
 		if player != nil {
-			delete(f.playerAll, owner)
+			delete(g.playerAll, owner)
 			seat := player.IntDef(0, "seat")
 			name := player.StrDef("", "name")
-			f.releaseSeat(seat)
-			network.Infof("Game(%v) player %v/%v leave game on %v", f.Group, owner, name, f.Group)
+			g.releaseSeat(seat)
+			network.Infof("Game(%v) player %v/%v leave game on %v", g.Group, owner, name, g.Group)
 		}
 	}
 }
 
-func (f *FireGame) OnNetworkPing(conn network.NetworkConnection, ping time.Duration) {
+func (g *FireGame) OnNetworkPing(conn network.NetworkConnection, ping time.Duration) {
 
 }
 
-func (f *FireGame) RemoveObject(v interface{}) {
+func (g *FireGame) RemoveObject(v interface{}) {
 
 }
 
-func (f *FireGame) Update(delta float64) {
+func (g *FireGame) AddBulllet(bullet *Bullet) {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+	g.bulletAll[bullet.CID] = bullet
+}
+
+func (g *FireGame) Update(delta float64) {
+	g.lock.RLock()
+	defer g.lock.RUnlock()
+	if !g.boss.Removed {
+		g.boss.Update(delta)
+	}
+	for _, player := range g.playerAll {
+		if !player.Removed {
+			player.Update(delta)
+		}
+	}
+	for _, bullet := range g.bulletAll {
+		if !bullet.Removed {
+			bullet.Update(delta)
+		}
+	}
 }
 
 type Boss struct {
@@ -168,6 +239,7 @@ type Boss struct {
 	Game     *FireGame
 	Position Vec
 	Radius   float64
+	Healthy  int
 }
 
 func NewBoss(game *FireGame, cid string) (boss *Boss) {
@@ -176,17 +248,33 @@ func NewBoss(game *FireGame, cid string) (boss *Boss) {
 		Position:         Vec{0, 0},
 		Radius:           160,
 	}
-	boss.SetHealthy(0)
+	boss.SetHealthy(100)
 	boss.RegisterNetworkProp()
-	boss.NetworkComponent.OnNetworkRemove = boss.OnNetworkRemove
+	boss.NetworkComponent.OnNetworkRemove = boss.Remove
 	return
 }
 
-func (b *Boss) SetHealthy(v float64) {
+func (b *Boss) SetHealthy(v int) {
+	b.Healthy = v
 	b.SetValue("healthy", v)
 }
 
-func (b *Boss) OnNetworkRemove() {
+func (b *Boss) Update(delta float64) {
+}
+
+func (b *Boss) Hurt(power int) {
+	b.Healthy -= power
+	b.SetHealthy(b.Healthy)
+	if b.Healthy <= 0 {
+		b.Remove()
+	}
+}
+
+func (b *Boss) Remove() {
+	b.Removed = true
+}
+
+func (b *Boss) OnRemove() {
 	b.Game.RemoveObject(b)
 }
 
@@ -197,46 +285,36 @@ type Bullet struct {
 	Radius    float64
 	Direct    Vec
 	Speed     float64
+	Power     int
 	startTime time.Time
 }
 
-func NewBullet(game *FireGame, cid string) (bullet *Bullet) {
+func NewBullet(game *FireGame, cid string, power int) (bullet *Bullet) {
 	bullet = &Bullet{
 		NetworkComponent: network.NewNetworkComponent(FactoryTypeBullet, game.Group, cid),
+		Game:             game,
 		Position:         Vec{0, 0},
 		Radius:           16,
 		Direct:           Vec{0, 1},
+		Power:            power,
 		startTime:        time.Now(),
 	}
 	bullet.SetDirect(Vec{0, 1})
 	bullet.SetSpeed(1000)
 	bullet.SetColor(0xffffffff)
 	bullet.SetPosition(Vec{0, 0})
-	bullet.OnPropUpdate["speed"] = func(key string, val interface{}) {
-		bullet.Speed = converter.Float64(val)
-	}
-	bullet.OnPropUpdate["direct"] = func(key string, val interface{}) {
-		vals, _ := converter.ArrayFloat64Val(val)
-		if len(vals) >= 2 {
-			bullet.Direct = Vec{vals[0], vals[1]}
-		}
-	}
-	bullet.OnPropUpdate["position"] = func(key string, val interface{}) {
-		vals, _ := converter.ArrayFloat64Val(val)
-		if len(vals) >= 2 {
-			bullet.Position = Vec{vals[0], vals[1]}
-		}
-	}
 	bullet.RegisterNetworkProp()
-	bullet.NetworkComponent.OnNetworkRemove = bullet.Remove
+	bullet.NetworkComponent.OnNetworkRemove = bullet.OnRemove
 	return
 }
 
 func (b *Bullet) SetDirect(v Vec) {
+	b.Direct = v
 	b.SetValue("direct", v)
 }
 
 func (b *Bullet) SetSpeed(v float64) {
+	b.Speed = v
 	b.SetValue("speed", v)
 }
 
@@ -245,32 +323,68 @@ func (b *Bullet) SetColor(v int) {
 }
 
 func (b *Bullet) SetPosition(v Vec) {
+	b.Position = v
 	b.SetValue("position", v)
 }
 
-func (b *Bullet) Update(dt float64) {
-	if b.IsServer {
-		b.SetPosition(b.Position.Add(b.Direct.Scale(b.Speed * dt)))
+func (b *Bullet) Update(delta float64) {
+	if b.IsServer() {
+		b.collision(delta)
+		b.move(delta)
 		if time.Since(b.startTime) > 5*time.Second {
 			b.Remove()
 		}
 	}
 }
 
+func (b *Bullet) collision(delta float64) {
+	var p = b.Position.Add(b.Direct.Mul(b.Speed * delta))
+
+	//wall
+	if p[0] > b.Game.Width/2 { //right
+		b.Direct = b.Direct.Reflect(Vec{-1, 0})
+	}
+	if p[0] < -b.Game.Width/2 { //left
+		b.Direct = b.Direct.Reflect(Vec{1, 0})
+	}
+	if p[1] > -b.Game.Height/2 { //top
+		b.Direct = b.Direct.Reflect(Vec{0, 1})
+	}
+	if p[1] < b.Game.Height/2 { //bottom
+		b.Direct = b.Direct.Reflect(Vec{0, -1})
+	}
+
+	//boss
+	if !b.Game.boss.Removed && p.Sub(b.Game.boss.Position).Length() <= b.Game.boss.Radius {
+		b.Game.boss.Hurt(b.Power)
+		b.Remove()
+	}
+}
+
+func (b *Bullet) move(delta float64) {
+	b.SetPosition(b.Position.Add(b.Direct.Mul(b.Speed * delta)))
+}
+
 func (b *Bullet) Remove() {
 	b.Removed = true
+}
+
+func (b *Bullet) OnRemove() {
 	b.Game.RemoveObject(b)
 }
 
 type Player struct {
 	*network.NetworkComponent
-	Game     *FireGame
-	Position Vec
+	Game         *FireGame
+	Position     Vec
+	WeaponUsing  int
+	WeaponDirect Vec
 }
 
 func NewPlayer(game *FireGame, cid string) (player *Player) {
 	player = &Player{
 		NetworkComponent: network.NewNetworkComponent(FactoryTypePlayer, game.Group, cid),
+		Game:             game,
 	}
 	player.SetName("")
 	player.SetSeat(0)
@@ -281,7 +395,7 @@ func NewPlayer(game *FireGame, cid string) (player *Player) {
 	player.RegisterNetworkCall("switch", player.OnSwitchWeapon)
 	player.RegisterNetworkCall("turn", player.OnTurnTo)
 	player.RegisterNetworkCall("fire", player.OnFireTo)
-	player.NetworkComponent.OnNetworkRemove = player.OnNetworkRemove
+	player.NetworkComponent.OnNetworkRemove = player.OnRemove
 	return
 }
 
@@ -294,6 +408,7 @@ func (p *Player) SetSeat(v int) {
 }
 
 func (p *Player) SetWeaponUsing(v int) {
+	p.WeaponUsing = v
 	p.SetValue("weapon.using", v)
 }
 
@@ -302,23 +417,55 @@ func (p *Player) SetWeaponAngle(v float64) {
 }
 
 func (p *Player) SetWeaponDirect(v Vec) {
+	p.WeaponDirect = v
 	p.SetValue("weapon.direct", v)
 }
 
+func (p *Player) Update(delta float64) {
+
+}
+
+func (p *Player) turnTo(arg Vec) {
+	var direct = arg.Sub(p.Position).Normalized()
+	var r = direct.AngleTo(Vec{0, 1})
+	var angle = math.Pi - r
+	p.SetWeaponAngle(angle)
+	p.SetWeaponDirect(direct)
+}
+
+func (p *Player) createBullet() *Bullet {
+	var b = NewBullet(p.Game, uuid.New(), p.WeaponUsing+1)
+	var pos = p.Position.Add(p.WeaponDirect.Mul(50))
+	b.SetPosition(pos)
+	b.SetDirect(p.WeaponDirect)
+	b.SetColor(p.Game.weaponColors[p.WeaponUsing])
+	return b
+}
+
+func (p *Player) fireTo(arg Vec) {
+	p.turnTo(arg)
+	p.Game.AddBulllet(p.createBullet())
+}
+
+func (p *Player) Remove() {
+	p.Removed = true
+}
+
 func (p *Player) OnSwitchWeapon(ctx *network.NetworkSession, uuid string) (err error) {
+	p.SetWeaponUsing((p.WeaponUsing + 1) % len(p.Game.weaponColors))
 	return
 }
 
 func (p *Player) OnTurnTo(ctx *network.NetworkSession, uuid string, arg Vec) (err error) {
-	fmt.Printf("OnTurnTo-->%v\n", arg)
+	p.turnTo(arg)
 	return
 }
 
 func (p *Player) OnFireTo(ctx *network.NetworkSession, uuid string, arg Vec) (err error) {
-	fmt.Printf("OnFireTo-->%v\n", arg)
+	p.fireTo(arg)
 	return
 }
 
-func (p *Player) OnNetworkRemove() {
+func (p *Player) OnRemove() {
 	p.Game.RemoveObject(p)
 }

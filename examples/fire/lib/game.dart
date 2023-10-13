@@ -185,9 +185,11 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
 
     var backgroud = RectangleComponent(size: size, anchor: Anchor.center);
     backgroud.paint.color = const Color.fromARGB(255, 100, 100, 100);
-    var boss = Boss(group: nGroup);
     world.add(backgroud);
-    world.add(boss);
+    if (isServer) {
+      var boss = Boss(group: nGroup);
+      world.add(boss);
+    }
     world.addAll(createWalls());
   }
 
@@ -274,7 +276,7 @@ class Boss extends CircleComponent with NetworkComponent {
   @override
   String get nGroup => group;
 
-  NetworkProp<int> nHealthy = NetworkProp("healthy", 10000);
+  NetworkProp<int> nHealthy = NetworkProp("healthy", 100);
 
   final TextComponent _show = TextComponent(anchor: Anchor.center);
 
@@ -374,7 +376,7 @@ class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
 
 class Player extends RectangleComponent with HasGameReference<FireGame>, NetworkComponent {
   static Player? current;
-  static List<Color> weaponColors = [Colors.green.shade500, Colors.green.shade800, Colors.yellow.shade500, Colors.yellow.shade800, Colors.red.shade500, Colors.red.shade800];
+  static List<int> weaponColors = [0xFFFF4B91, 0xFFFFCD4B, 0xFFD6D46D, 0xFFF4DFB6, 0xFFDE8F5F, 0xFF9A4444];
 
   String group;
   String cid;
@@ -406,8 +408,9 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
   Player({required this.group, required this.cid}) {
     registerNetworkProp(nName);
     registerNetworkProp(nSeat, setter: (v) => syncSeat(false));
-    registerNetworkProp(nWeaponUsing, setter: (v) => weaponView.paint.color = weaponColors[v]);
+    registerNetworkProp(nWeaponUsing, setter: (v) => weaponView.paint.color = Color(weaponColors[v]));
     registerNetworkProp(nWeaponAngle, setter: (v) => weaponView.angle = v);
+    registerNetworkProp(nWeaponDirect);
     registerNetworkCall(nTurn, (ctx, uuid, p) => _turnTo(p));
     registerNetworkCall(nFire, (ctx, uuid, p) => _fireTo(p));
     registerNetworkCall(nSwitch, (ctx, uuid, p) => _switchWeapon());
