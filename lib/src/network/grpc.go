@@ -353,14 +353,21 @@ func (n *NetworkServerGRPC) RemoteCall(ctx context.Context, arg *grpc.CallArg) (
 		Name: arg.Name,
 		Arg:  arg.Arg,
 	})
-	result = &grpc.CallResult{
-		Id:     &grpc.RequestID{Uuid: ret.UUID},
-		Cid:    ret.CID,
-		Name:   ret.Name,
-		Result: ret.Result,
-	}
+
 	if xerr != nil {
-		result.Error = xerr.Error()
+		result = &grpc.CallResult{
+			Id:    arg.Id,
+			Cid:   arg.Cid,
+			Name:  arg.Name,
+			Error: xerr.Error(),
+		}
+	} else {
+		result = &grpc.CallResult{
+			Id:     &grpc.RequestID{Uuid: ret.UUID},
+			Cid:    ret.CID,
+			Name:   ret.Name,
+			Result: ret.Result,
+		}
 	}
 	return
 }
