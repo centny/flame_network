@@ -187,6 +187,7 @@ func (g *FireGame) onPlayerJoin(ctx *network.NetworkSession, _ string, name stri
 // }
 
 func (g *FireGame) OnNetworkState(all network.NetworkConnectionSet, conn network.NetworkConnection, state network.NetworkState, info interface{}) {
+	network.Infof("Game(%v) 1/%v connect state to %v", g.Group, len(all), state)
 	if g.IsServer() && len(all) < 1 && (state == network.NetworkStateClosed || state == network.NetworkStateError) {
 		g.lock.Lock()
 		defer g.lock.Unlock()

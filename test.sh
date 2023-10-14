@@ -7,7 +7,8 @@ if [ "$1" == "" ];then
 else
     flutter test --coverage --timeout none --name $1
 fi
-genhtml coverage/lcov.info -o coverage
+lcov --remove coverage/lcov.info 'lib/src/network/grpc/' -o coverage/new_lcov.info
+genhtml coverage/new_lcov.info -o coverage
 
 
 pkgs="\

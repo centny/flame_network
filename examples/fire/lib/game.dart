@@ -130,6 +130,12 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   }
 
   @override
+  Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
+    await super.onNetworkState(all, conn, state, info: info);
+    L.i("Game($nGroup) 1/${all.length} connect state to $state");
+  }
+
+  @override
   Future<void> onNetworkUserDisconnected(NetworkConnection conn, String user, {Object? info}) async {
     if (isServer) {
       var player = players.remove(user);

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:io';
 
 import 'package:flame_network/src/common/log.dart';
 import 'package:flutter/foundation.dart';
@@ -132,6 +133,22 @@ void main() {
     nc.unregister();
     await NetworkManagerGRPC.shared.stop();
   });
+  test('NetworkGRPC.sync', () async {
+    var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.isServer = true;
+    NetworkManagerGRPC.shared.isClient = false;
+    NetworkManagerGRPC.shared.callback = callback;
+    Future<Uint8List> readCert(String name) async {
+      final File f = File(name);
+      final bytes = await f.readAsBytes();
+      return bytes;
+    }
+
+    NetworkManagerGRPC.shared.security = ServerTlsCredentials(certificate: await readCert("test/server.pem"), privateKey: await readCert("test/server.key"));
+    await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.stop();
+    NetworkManagerGRPC.shared.security = null;
+  });
   test('NetworkGRPC.web', () async {
     var callback = TestNetworkCallback();
     NetworkManagerGRPC.shared.isServer = true;
@@ -175,6 +192,7 @@ void main() {
     var ready = await callback.waitConn();
     L.i("conn is $ready");
     await NetworkManagerGRPC.shared.ping(const Duration(seconds: 3));
+    L.i("ping is ${NetworkManagerGRPC.shared.pingSpeed}");
     await Future.delayed(const Duration(milliseconds: 100));
     await NetworkManagerGRPC.shared.onTicker();
     var closed = await callback.waitConn();
@@ -222,15 +240,22 @@ void main() {
     NetworkManagerGRPC.shared.callback = callback;
     await NetworkManagerGRPC.shared.start();
     await callback.waitConn();
+
+    var connector = WebSocketChannelConnector(NetworkManagerGRPC.shared.webAddress);
+    await connector.connect();
+    connector.shutdown();
+
     try {
       await NetworkManagerGRPC.shared.networkCall(NetworkCallArg(uuid: "123", nCID: "123", nName: "error", nArg: "abc"));
       assert(false);
     } catch (_) {}
+
     try {
       NetworkManagerGRPC.shared.grpcOn = false;
       NetworkManagerGRPC.shared.webOn = false;
       await NetworkManagerGRPC.shared.reconnect();
     } catch (_) {}
+
     var client = NetworkManagerGRPC.shared.client;
     var connections = NetworkManagerGRPC.shared.server?.connections ?? [];
     await NetworkManagerGRPC.shared.stop();
@@ -258,5 +283,8 @@ void main() {
     NetworkManagerGRPC.shared.isClient = false;
     NetworkManagerGRPC.shared.service = null;
     await NetworkManagerGRPC.shared.onTicker();
+
+    var sink = CastStreamSinkGRPC(StreamController().sink);
+    sink.addError("error");
   });
 }

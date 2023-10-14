@@ -261,6 +261,7 @@ class NetworkServerGRPC extends ServerServiceBase {
 }
 
 class NetworkClientGRPC extends ServerClient with NetworkConnection {
+  ClientChannelBase channel;
   NetworkCallback callback;
   Duration timeout = const Duration(seconds: 10);
   ResponseStream<SyncData>? _syncMonitor;
@@ -273,7 +274,7 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
   @override
   bool get isServer => false;
 
-  NetworkClientGRPC(ClientChannelBase channel, this.callback) : super(channel) {
+  NetworkClientGRPC(this.channel, this.callback) : super(channel) {
     channel.onConnectionStateChanged.listen(onConnectionStateChanged);
   }
 
@@ -339,6 +340,8 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
     }
     return result.wrap();
   }
+
+  Future<void> shutdown() => channel.shutdown();
 }
 
 class HandledServerConnectionGRPC implements ServerTransportConnection {
@@ -461,11 +464,7 @@ class HandledServerGRPC extends Server {
         clientCertificate: request.certificate,
         remoteAddress: request.connectionInfo?.remoteAddress,
       );
-    }, onError: (error, stackTrace) {
-      if (error is Error) {
-        Zone.current.handleUncaughtError(error, stackTrace);
-      }
-    }, cancelOnError: true);
+    });
   }
 
   @override
@@ -628,7 +627,7 @@ class NetworkManagerGRPC extends NetworkManager {
         onNetworkPing(client!, _pingSpeed);
       }
     } catch (e) {
-      _pingSpeed = Duration.zero;
+      _pingSpeed = const Duration(milliseconds: -1);
       if (_pingSpeed != pingOld) {
         onNetworkPing(client!, _pingSpeed);
       }
@@ -673,7 +672,7 @@ class NetworkManagerGRPC extends NetworkManager {
     if (isClient && channel != null) {
       L.i("[GRPC] connection is stopping");
       await client?.stopMonitorSync();
-      await channel?.shutdown();
+      await client?.shutdown();
       channel = null;
       client = null;
     }
