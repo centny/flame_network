@@ -23,7 +23,7 @@ import (
 func TestGRPC(t *testing.T) {
 	tester := xdebug.CaseTester{
 		0: 1,
-		3: 1,
+		6: 1,
 	}
 	newTestTransport := func() *NetworkTransportGRPC {
 		n := NewNetworkTransportGRPC()
@@ -182,7 +182,12 @@ func TestGRPC(t *testing.T) {
 					Props: "xxx",
 				},
 				{
-					Props: "{}",
+					Props:    "{}",
+					Triggers: "xxx",
+				},
+				{
+					Props:    "{}",
+					Triggers: "{}",
 				},
 			},
 		}

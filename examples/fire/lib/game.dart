@@ -308,6 +308,7 @@ class Boss extends CircleComponent with NetworkComponent {
 
 class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
   final String cid;
+  final String? playerID;
   final String group;
   final int power;
   final NetworkPropVector2 nDirect = NetworkPropVector2("direct", Vector2(0, 1));
@@ -329,7 +330,7 @@ class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
   @override
   bool get nRemoved => isRemoved;
 
-  Bullet({required this.group, String? cid, int? power})
+  Bullet({required this.group, this.playerID, String? cid, int? power})
       : cid = cid ?? const Uuid().v1(),
         power = power ?? 1,
         super(anchor: Anchor.center, radius: 16) {
@@ -362,6 +363,17 @@ class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
     super.update(dt);
   }
 
+  void _sendReward() {
+    if (playerID == null) {
+      return;
+    }
+    var player = NetworkComponent.findComponent(playerID!) as Player?;
+    if (player == null) {
+      return;
+    }
+    player.sendReward(1000);
+  }
+
   @override
   void onCollisionStart(Set<Vector2> intersectionPoints, PositionComponent other) {
     super.onCollisionStart(intersectionPoints, other);
@@ -373,6 +385,7 @@ class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
         other.nHealthy.value -= power;
         if (other.nHealthy.value <= 0) {
           other.removeFromParent();
+          _sendReward();
         }
         removeFromParent();
       }
@@ -407,6 +420,7 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
   final NetworkProp<int> nWeaponUsing = NetworkProp("weapon.using", 0);
   final NetworkProp<double> nWeaponAngle = NetworkProp("weapon.angle", 0);
   final NetworkPropVector2 nWeaponDirect = NetworkPropVector2("weapon.direct", Vector2(0, 1));
+  final NetworkTrigger<double> nReward = NetworkTrigger("reward");
   final NetworkCall<void, NetworkVector2> nTurn = NetworkCall("turn", argNew: NetworkVector2.zero);
   final NetworkCall<void, NetworkVector2> nFire = NetworkCall("fire", argNew: NetworkVector2.zero);
   final NetworkCall<void, int> nSwitch = NetworkCall("switch");
@@ -417,6 +431,7 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
     registerNetworkProp(nWeaponUsing, setter: (v) => weaponView.paint.color = Color(weaponColors[v]));
     registerNetworkProp(nWeaponAngle, setter: (v) => weaponView.angle = v);
     registerNetworkProp(nWeaponDirect);
+    registerNetworkTrigger(nReward, _onReward);
     registerNetworkCall(nTurn, (ctx, uuid, p) => _turnTo(p));
     registerNetworkCall(nFire, (ctx, uuid, p) => _fireTo(p));
     registerNetworkCall(nSwitch, (ctx, uuid, p) => _switchWeapon());
@@ -459,12 +474,20 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
     }
   }
 
+  void _onReward(double v) {
+    L.i("Game($nGroup) reward $v");
+  }
+
   Bullet _createBullet() {
-    var b = Bullet(group: game.nGroup, power: nWeaponUsing.value + 1);
+    var b = Bullet(group: game.nGroup, playerID: nCID, power: nWeaponUsing.value + 1);
     b.nPosition.value = position + nWeaponDirect.value * weaponView.height;
     b.nDirect.value = nWeaponDirect.value;
     b.nColor.value = weaponView.paint.color;
     return b;
+  }
+
+  void sendReward(double v) {
+    nReward.add(v);
   }
 
   Future<void> _turnTo(Vector2 p) async {

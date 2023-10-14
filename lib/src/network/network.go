@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -97,11 +98,12 @@ type NetworkEvent interface {
 }
 
 type NetworkSyncDataComponent struct {
-	Factory string
-	CID     string
-	Owner   string
-	Removed bool
-	Props   xmap.M
+	Factory  string
+	CID      string
+	Owner    string
+	Removed  bool
+	Props    xmap.M
+	Triggers xmap.M
 }
 
 type NetworkSyncData struct {
@@ -307,7 +309,84 @@ func (s *SyncMap) Sync(value xmap.M) {
 
 type NetworkPropUpdate func(key string, val interface{})
 
+type NetworkTrigger interface{}
 type NetworkCall interface{}
+
+type networkTriggerItem struct {
+	Name    string
+	Trigger NetworkTrigger
+	Cache   chan interface{}
+}
+
+func (n *networkTriggerItem) Add(v interface{}) {
+	select {
+	case n.Cache <- v:
+	default:
+	}
+}
+
+func (n *networkTriggerItem) Send() string {
+	vals := []string{}
+	callValue := reflect.ValueOf(n.Trigger)
+	callType := callValue.Type()
+	callIn := callType.NumIn()
+	more := true
+	for more {
+		select {
+		case v := <-n.Cache:
+			if callIn == 1 {
+				callValue.Call([]reflect.Value{reflect.ValueOf(v)})
+			} else {
+				callValue.Call([]reflect.Value{reflect.ValueOf(n.Name), reflect.ValueOf(v)})
+			}
+			switch v := v.(type) {
+			case float32, float64:
+				vals = append(vals, fmt.Sprintf("%.02f", v))
+			default:
+				vals = append(vals, converter.JSON(v))
+			}
+		default:
+			more = false
+		}
+	}
+	if len(vals) < 1 {
+		return ""
+	}
+	return fmt.Sprintf("[%v]", strings.Join(vals, ","))
+}
+
+func (n *networkTriggerItem) Recv(val string) (err error) {
+	if len(val) < 1 {
+		err = fmt.Errorf("value is empty")
+		return
+	}
+	callValue := reflect.ValueOf(n.Trigger)
+	callType := callValue.Type()
+	callIn := callType.NumIn()
+	var listType reflect.Type
+	if callIn == 1 {
+		listType = callType.In(0)
+	} else {
+		listType = callType.In(1)
+	}
+	listValue := reflect.New(reflect.SliceOf(listType))
+	err = json.Unmarshal([]byte(val), listValue.Interface())
+	if err != nil {
+		return
+	}
+	listValue = reflect.Indirect(listValue)
+	listLen := listValue.Len()
+	if callIn == 1 {
+		for i := 0; i < listLen; i++ {
+			callValue.Call([]reflect.Value{listValue.Index(i)})
+		}
+	} else {
+		for i := 0; i < listLen; i++ {
+			callValue.Call([]reflect.Value{reflect.ValueOf(n.Name), listValue.Index(i)})
+		}
+	}
+	return
+}
 
 type NetworkComponent struct {
 	*xmap.SafeM
@@ -320,6 +399,7 @@ type NetworkComponent struct {
 	OnPropUpdate    map[string]NetworkPropUpdate
 	Refer           interface{}
 	propAll         *SyncMap
+	triggerAll      map[string]*networkTriggerItem
 	callAll         map[string]NetworkCall
 }
 
@@ -330,6 +410,7 @@ func NewNetworkComponent(factory, group, cid string) (c *NetworkComponent) {
 		CID:          cid,
 		OnPropUpdate: map[string]NetworkPropUpdate{},
 		propAll:      NewSyncMap(),
+		triggerAll:   map[string]*networkTriggerItem{},
 		callAll:      map[string]NetworkCall{},
 	}
 	c.propAll.OnUpdate = c.onPropUpdate
@@ -382,13 +463,13 @@ func (n *NetworkComponent) onPropUpdate(key string, val interface{}) {
 	}
 }
 
-func (n *NetworkComponent) CheckNetworkProp(whole bool) xmap.M {
+func (n *NetworkComponent) SendNetworkProp(whole bool) xmap.M {
 	n.RLock()
 	defer n.RUnlock()
 	return n.propAll.Updated(whole)
 }
 
-func (n *NetworkComponent) UpdateNetworkProp(updated xmap.M) {
+func (n *NetworkComponent) RecvNetworkProp(updated xmap.M) {
 	n.RLock()
 	defer n.RUnlock()
 	n.propAll.Sync(updated)
@@ -396,6 +477,94 @@ func (n *NetworkComponent) UpdateNetworkProp(updated xmap.M) {
 		call := n.OnPropUpdate[k]
 		if call != nil {
 			call(k, v)
+		}
+	}
+}
+
+//------ NetworkTrigger -------//
+
+func (n *NetworkComponent) RegisterNetworkTrigger(name string, trigger NetworkTrigger) (err error) {
+	callValue := reflect.ValueOf(trigger)
+	callType := callValue.Type()
+	if callType.NumIn() < 1 || callType.NumIn() > 2 {
+		err = fmt.Errorf("trigger %v must be (name, value) or (value)", callType)
+		return
+	}
+	n.Lock()
+	defer n.Unlock()
+	if n.triggerAll[name] != nil {
+		err = fmt.Errorf("NetworkTrigger %v is registered", name)
+		return
+	}
+
+	n.triggerAll[name] = &networkTriggerItem{
+		Name:    name,
+		Trigger: trigger,
+		Cache:   make(chan interface{}, 8),
+	}
+	n.addSelfToHub()
+	return
+}
+
+func (n *NetworkComponent) UnregisterNetworkTrigger(name string) {
+	n.Lock()
+	defer func() {
+		n.Unlock()
+		n.removeSelfFromHub()
+	}()
+	delete(n.triggerAll, name)
+
+}
+
+func (n *NetworkComponent) ClearNetworkTrigger() {
+	n.Lock()
+	defer func() {
+		n.Unlock()
+		n.removeSelfFromHub()
+	}()
+	n.triggerAll = map[string]*networkTriggerItem{}
+}
+
+func (n *NetworkComponent) findNetworkTrigger(name string) *networkTriggerItem {
+	n.RLock()
+	defer n.RUnlock()
+	return n.triggerAll[name]
+}
+
+func (n *NetworkComponent) NetworkTrigger(name string, v interface{}) (err error) {
+	trigger := n.findNetworkTrigger(name)
+	if trigger == nil {
+		err = fmt.Errorf("NetworkComponent(%v) trigger %v is not exists", n.CID, name)
+		return
+	}
+	trigger.Add(v)
+	return
+}
+
+func (n *NetworkComponent) SendNetworkTrigger() xmap.M {
+	n.RLock()
+	defer n.RUnlock()
+	triggerAll := xmap.M{}
+	for _, trigger := range n.triggerAll {
+		send := trigger.Send()
+		if len(send) > 0 {
+			triggerAll[trigger.Name] = send
+		}
+	}
+	return triggerAll
+}
+
+func (n *NetworkComponent) RecvNetworkTrigger(updated xmap.M) {
+	for name, v := range updated {
+		trigger := n.findNetworkTrigger(name)
+		if trigger == nil {
+			Warnf("NetworkComponent(%v) trigger %v is not exists for recv", n.CID, name)
+			continue
+		}
+		err := trigger.Recv(converter.String(v))
+		if err != nil {
+			Warnf("NetworkComponent(%v) trigger %v recv error %v by %v", n.CID, name, err, v)
+			continue
 		}
 	}
 }
@@ -413,8 +582,8 @@ func (n *NetworkComponent) UnregisterNetworkEvent(event NetworkEvent) {
 //------ NetworkCall -------//
 
 func (n *NetworkComponent) RegisterNetworkCall(name string, call NetworkCall) (err error) {
-	n.RLock()
-	defer n.RUnlock()
+	n.Lock()
+	defer n.Unlock()
 	if n.callAll[name] != nil {
 		err = fmt.Errorf("NetworkCall %v is registered", name)
 		return
@@ -719,13 +888,15 @@ func (n *NetworkComponentHub) SyncSend(group string, whole bool) []*NetworkSyncD
 			})
 			continue
 		}
-		props := c.CheckNetworkProp(whole)
-		if len(props) > 0 {
+		props := c.SendNetworkProp(whole)
+		triggers := c.SendNetworkTrigger()
+		if len(props) > 0 || len(triggers) > 0 {
 			components = append(components, &NetworkSyncDataComponent{
-				Factory: c.Factory,
-				CID:     c.CID,
-				Owner:   c.Owner,
-				Props:   props,
+				Factory:  c.Factory,
+				CID:      c.CID,
+				Owner:    c.Owner,
+				Props:    props,
+				Triggers: triggers,
 			})
 		}
 	}
@@ -751,7 +922,10 @@ func (n *NetworkComponentHub) SyncRecv(group string, components []*NetworkSyncDa
 		}
 		component.Owner = c.Owner
 		if len(c.Props) > 0 {
-			component.UpdateNetworkProp(c.Props)
+			component.RecvNetworkProp(c.Props)
+		}
+		if len(c.Triggers) > 0 {
+			component.RecvNetworkTrigger(c.Triggers)
 		}
 	}
 	if whole {

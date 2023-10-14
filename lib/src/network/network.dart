@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
@@ -101,8 +102,9 @@ class NetworkSyncDataComponent {
   String? nOwner;
   bool? nRemoved;
   Map<String, dynamic>? nProps = {};
+  Map<String, dynamic>? nTriggers = {};
 
-  NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nOwner, this.nRemoved, this.nProps});
+  NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nOwner, this.nRemoved, this.nProps, this.nTriggers});
 }
 
 class NetworkSyncData {
@@ -291,17 +293,24 @@ class NetworkProp<T> {
     if (setter != null) {
       setter!(v);
     }
-    if (onChanged != null) {
-      onChanged!(v);
+    if (onUpdate != null) {
+      onUpdate!(v);
     }
   }
 
   void Function(T v)? setter;
   T Function()? getter;
 
-  void Function(T v)? onChanged;
+  void Function(T v)? onUpdate;
 
   NetworkProp(this.name, this._value);
+
+  dynamic syncSend() {
+    _updated = false;
+    return encode();
+  }
+
+  void syncRecv(dynamic v) => decode(v);
 
   dynamic encode() {
     if (value is NetworkValue) {
@@ -318,14 +327,114 @@ class NetworkProp<T> {
   }
 }
 
+class NetworkTrigger<T> with Stream<T> implements StreamSink<T> {
+  bool _updated = false; //default is not trigger to sync
+  bool _listen = false;
+  final List<T> _value = [];
+  final StreamController<T> _stream = StreamController();
+  final StreamController<T> _sink = StreamController();
+
+  bool get updated => _updated;
+  List<T> get value => _value;
+  String name;
+
+  void Function(T)? onRecv;
+  void Function()? onDone;
+  void Function(dynamic)? onError;
+  void Function(T v)? onUpdate;
+
+  NetworkTrigger(this.name) {
+    _stream.onListen = () => _listen = true;
+    _stream.onCancel = () => _listen = false;
+    _sink.stream.listen(_onData, onDone: _onDone, onError: _onError);
+  }
+
+  void _onData(T event) {
+    if (onRecv != null) {
+      onRecv!(event);
+    }
+    if (_listen) {
+      _stream.sink.add(event);
+    }
+    if (NetworkManager.global.isServer && !NetworkManager.global.isClient) {
+      _value.add(event);
+      _updated = true;
+      if (onUpdate != null) {
+        onUpdate!(event);
+      }
+    }
+  }
+
+  void _onDone() {
+    if (onDone != null) {
+      onDone!();
+    }
+    if (_listen) {
+      _stream.sink.close();
+    }
+  }
+
+  void _onError(e) {
+    if (onError != null) {
+      onError!(e);
+    }
+    if (_listen) {
+      _stream.sink.addError(e);
+    }
+  }
+
+  @override
+  void add(T event) => _sink.add(event);
+
+  @override
+  void addError(Object error, [StackTrace? stackTrace]) => _sink.addError(error, stackTrace);
+
+  @override
+  Future addStream(Stream<T> stream) => _sink.addStream(stream);
+
+  @override
+  Future close() => _sink.close();
+
+  @override
+  Future get done => _sink.done;
+
+  @override
+  StreamSubscription<T> listen(void Function(T event)? onData, {Function? onError, void Function()? onDone, bool? cancelOnError}) {
+    return _stream.stream.listen(onData, onDone: onDone, onError: onError, cancelOnError: cancelOnError);
+  }
+
+  dynamic syncSend() {
+    _updated = false;
+    var v = encode(value);
+    _value.clear();
+    return v;
+  }
+
+  void syncRecv(dynamic v) {
+    for (var val in decode(v)) {
+      add(val);
+    }
+  }
+
+  dynamic encode(List<T> v) {
+    return jsonEncode(v);
+  }
+
+  List<T> decode(dynamic v) {
+    return (jsonDecode(v) as List<dynamic>).map((e) => e as T).toList();
+  }
+}
+
 typedef NetworkComponentFactory = NetworkComponent Function(String key, String group, String cid);
 
 mixin NetworkComponent {
   static final Map<String, NetworkComponentFactory> _factoryAll = {};
   static final Map<String, NetworkComponent> _componentAll = {};
   static final Map<String, Map<String, NetworkComponent>> _componentGroup = {};
-  bool _updated = true; //default is updagted to sync
+  bool _propUpdated = true; //default is updated to sync
+  bool _triggerUpdated = true; //default is not trigger
   final Map<String, NetworkProp<dynamic>> _props = {};
+  final Map<String, NetworkTrigger<dynamic>> _triggers = {};
   final Map<String, NetworkCall<dynamic, dynamic>> _calls = {};
 
   String? nOwner;
@@ -333,7 +442,7 @@ mixin NetworkComponent {
   String get nGroup => "";
   String get nCID;
   bool get nRemoved;
-  bool get nUpdated => _updated;
+  bool get nUpdated => _propUpdated || _triggerUpdated;
   bool get isServer => NetworkManager.global.isServer;
   bool get isClient => NetworkManager.global.isClient;
   bool get isOwner => nOwner != null && nOwner == NetworkManager.global.user;
@@ -400,7 +509,7 @@ mixin NetworkComponent {
   }
 
   void _removeComponentCheck() {
-    if (_props.isEmpty && _calls.isEmpty) {
+    if (_props.isEmpty && _triggers.isEmpty && _calls.isEmpty) {
       _removeComponent(this);
     }
   }
@@ -423,7 +532,7 @@ mixin NetworkComponent {
     }
     prop.getter = getter;
     prop.setter = setter;
-    prop.onChanged = (v) => _updated = true;
+    prop.onUpdate = (v) => _propUpdated = true;
     if (setter != null) {
       setter(prop.value);
     }
@@ -441,22 +550,21 @@ mixin NetworkComponent {
     _removeComponentCheck();
   }
 
-  Map<String, dynamic> checkNetworkProp({bool? whole}) {
-    if (!nUpdated && !(whole ?? false)) {
+  Map<String, dynamic> sendNetworkProp({bool? whole}) {
+    if (!_propUpdated && !(whole ?? false)) {
       return {};
     }
     Map<String, dynamic> updated = {};
     for (var prop in _props.values) {
       if (prop.updated || (whole ?? false)) {
-        updated[prop.name] = prop.encode();
-        prop._updated = false;
+        updated[prop.name] = prop.syncSend();
       }
     }
-    _updated = false;
+    _propUpdated = false;
     return updated;
   }
 
-  void updateNetworkProp(Map<String, dynamic> updated) {
+  void recvNetworkProp(Map<String, dynamic> updated) {
     for (var name in updated.keys) {
       var prop = _props[name];
       if (prop == null) {
@@ -464,9 +572,64 @@ mixin NetworkComponent {
         continue;
       }
       try {
-        prop.decode(updated[name]);
+        prop.syncRecv(updated[name]);
       } catch (e, s) {
         L.e("NetworkComponent($nFactory,$nCID) update network prop ${prop.name} throw error $e\n$s");
+      }
+    }
+  }
+
+  //--------------------------//
+  //------ NetworkTrigger -------//
+
+  void registerNetworkTrigger<T>(NetworkTrigger<T> trigger, void Function(T)? recv, {void Function()? done, void Function(dynamic)? error}) {
+    if (_triggers.containsKey(trigger.name)) {
+      throw Exception("NetworkTrigger ${trigger.name} is registered");
+    }
+    trigger.onRecv = recv;
+    trigger.onDone = done;
+    trigger.onError = error;
+    trigger.onUpdate = (v) => _triggerUpdated = true;
+    _triggers[trigger.name] = trigger;
+    _addComponent(this);
+  }
+
+  void unregisterNetworkTrigger<T>(NetworkTrigger<T> trigger) {
+    _triggers.remove(trigger.name);
+    trigger.close();
+    _removeComponentCheck();
+  }
+
+  void clearNetworkTrigger() {
+    _triggers.clear();
+    _removeComponentCheck();
+  }
+
+  Map<String, dynamic> sendNetworkTrigger() {
+    if (!_triggerUpdated) {
+      return {};
+    }
+    Map<String, dynamic> updated = {};
+    for (var trigger in _triggers.values) {
+      if (trigger.updated) {
+        updated[trigger.name] = trigger.syncSend();
+      }
+    }
+    _triggerUpdated = false;
+    return updated;
+  }
+
+  void recvNetworkTrigger(Map<String, dynamic> updated) {
+    for (var name in updated.keys) {
+      var trigger = _triggers[name];
+      if (trigger == null) {
+        L.w("NetworkTrigger($nFactory,$nCID) trigger $name is not exists");
+        continue;
+      }
+      try {
+        trigger.syncRecv(updated[name]);
+      } catch (e, s) {
+        L.e("NetworkTrigger($nFactory,$nCID) recv network trigger ${trigger.name} throw error $e\n$s");
       }
     }
   }
@@ -480,9 +643,10 @@ mixin NetworkComponent {
         willRemove.add(c);
         continue;
       }
-      var props = c.checkNetworkProp(whole: whole);
-      if (props.isNotEmpty) {
-        components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nOwner: c.nOwner, nProps: props));
+      var props = c.sendNetworkProp(whole: whole);
+      var triggers = c.sendNetworkTrigger();
+      if (props.isNotEmpty || triggers.isNotEmpty) {
+        components.add(NetworkSyncDataComponent(nFactory: c.nFactory, nCID: c.nCID, nOwner: c.nOwner, nProps: props, nTriggers: triggers));
         continue;
       }
     }
@@ -507,7 +671,10 @@ mixin NetworkComponent {
       component ??= createComponent(c.nFactory, group, c.nCID);
       component.nOwner = c.nOwner;
       if (c.nProps?.isNotEmpty ?? false) {
-        component.updateNetworkProp(c.nProps ?? {});
+        component.recvNetworkProp(c.nProps ?? {});
+      }
+      if (c.nTriggers?.isNotEmpty ?? false) {
+        component.recvNetworkTrigger(c.nTriggers ?? {});
       }
     }
     if (whole ?? false) {

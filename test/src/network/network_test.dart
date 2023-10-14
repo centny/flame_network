@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
@@ -45,6 +46,8 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
   NetworkProp<Map<String, dynamic>> sMap = NetworkProp<Map<String, dynamic>>("map", {});
   NetworkProp<TestNetworkValue> sNet = NetworkProp("net", TestNetworkValue());
 
+  NetworkTrigger<int> tInt = NetworkTrigger<int>("int");
+
   NetworkCall<void, int> cUpdate = NetworkCall("update");
   NetworkCall<String, int> cParse = NetworkCall("parse");
   NetworkCall<void, TestNetworkValue> cNet0 = NetworkCall("net0", argNew: TestNetworkValue.new);
@@ -58,6 +61,7 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     registerNetworkProp(sString, getter: () => stringValue, setter: (v) => stringValue = v);
     registerNetworkProp(sMap, getter: () => mapValue, setter: (v) => mapValue = v);
     registerNetworkProp(sNet);
+    registerNetworkTrigger(tInt, (p0) => L.i("recieve"), done: () => L.i("done"), error: (p0) => L.i("error"));
     registerNetworkCall(cUpdate, updateInt);
     registerNetworkCall(cParse, parseInt);
     registerNetworkCall(cNet0, callNet0);
@@ -79,6 +83,7 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     unregisterNetworkProp(sString);
     unregisterNetworkProp(sMap);
     unregisterNetworkProp(sNet);
+    unregisterNetworkTrigger(tInt);
     unregisterNetworkCall(cUpdate);
     unregisterNetworkCall(cParse);
     unregisterNetworkCall(cNet0);
@@ -87,6 +92,7 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     unregisterNetworkEvent(this);
     unregisterFromNetworkManager();
     clearNetworkProp();
+    clearNetworkTrigger();
     clearNetworkCall();
   }
 
@@ -291,6 +297,56 @@ void main() {
     } catch (_) {}
     ne.unregister();
   });
+  test('NetworkTrigger.trigger', () async {
+    var m = TestNetworkManager();
+    NetworkManager.global.isClient = false;
+    m.session.user = "u123";
+    var nc = TestNetworkComponent();
+    late Completer c;
+    Map<String, dynamic> triggers = {};
+    nc.tInt.listen((event) {
+      c.complete();
+    }, onError: (e) {});
+
+    c = Completer();
+    nc.tInt.add(1);
+    await c.future;
+    assert(nc.tInt.updated);
+    triggers = nc.sendNetworkTrigger();
+    assert(triggers.isNotEmpty);
+    L.i("triggers is $triggers");
+
+    c = Completer();
+    nc.recvNetworkTrigger(triggers);
+    await c.future;
+    triggers = nc.sendNetworkTrigger();
+    assert(triggers.isNotEmpty);
+
+    c = Completer();
+    nc.tInt.addStream(Stream.value(1));
+    await c.future;
+    triggers = nc.sendNetworkTrigger();
+    assert(triggers.isNotEmpty);
+
+    nc.tInt.addError("error");
+    nc.recvNetworkTrigger({
+      "none": [1]
+    });
+
+    try {
+      nc.recvNetworkTrigger({"int": 100});
+      assert(false);
+    } catch (_) {}
+    try {
+      nc.registerNetworkTrigger(nc.tInt, (v) {});
+      assert(false);
+    } catch (_) {}
+
+    nc.unregister();
+    await nc.tInt.done;
+
+    NetworkManager.global.isClient = false;
+  });
   test('NetworkComponent.create', () async {
     NetworkComponent.onAdd = (p0) => L.i("add ->${p0.nCID}");
     NetworkComponent.onRemove = (p0) => L.i("remove ->${p0.nCID}");
@@ -304,26 +360,26 @@ void main() {
     m.session.user = "u123";
     var nc = TestNetworkComponent();
 
-    var props = nc.checkNetworkProp();
+    var props = nc.sendNetworkProp();
     assert(props.isNotEmpty);
     L.i("props is $props");
 
-    var props1 = nc.checkNetworkProp();
+    var props1 = nc.sendNetworkProp();
     assert(props1.isEmpty);
 
     nc.sInt.value = 1;
-    var props2 = nc.checkNetworkProp();
+    var props2 = nc.sendNetworkProp();
     assert(props2.length == 1);
 
     props["none"] = 1;
-    nc.updateNetworkProp(props);
+    nc.recvNetworkProp(props);
 
     nc.unregister();
 
     //
     var ne = TestNetworkErr();
     try {
-      ne.updateNetworkProp({"err": 100});
+      ne.recvNetworkProp({"err": 100});
       assert(false);
     } catch (_) {}
     ne.unregister();
@@ -332,10 +388,12 @@ void main() {
     var cb = TestNetworkManager();
     var nc1 = TestNetworkComponent();
 
+    assert(nc1.nUpdated);
     var cs1 = NetworkComponent.syncSend("*");
     assert(cs1.length == 1);
     var cs2 = NetworkComponent.syncSend("*");
     assert(cs2.isEmpty);
+    cs1[0].nTriggers = {"int": "[1]"};
     NetworkComponent.syncRecv("*", cs1);
 
     cb.sync("*");

@@ -17,6 +17,7 @@ message SyncDataComponent {
   string owner = 3;
   bool removed = 4;
   string props = 5;
+  string triggers = 6;
 }
 
 message SyncArg { RequestID id = 1; }

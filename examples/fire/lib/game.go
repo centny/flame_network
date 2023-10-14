@@ -246,6 +246,7 @@ type Boss struct {
 func NewBoss(game *FireGame, cid string) (boss *Boss) {
 	boss = &Boss{
 		NetworkComponent: network.NewNetworkComponent(FactoryTypeBoss, game.Group, cid),
+		Game:             game,
 		Position:         Vec{0, 0},
 		Radius:           160,
 	}
@@ -263,11 +264,15 @@ func (b *Boss) SetHealthy(v int) {
 func (b *Boss) Update(delta float64) {
 }
 
-func (b *Boss) Hurt(power int) {
+func (b *Boss) Hurt(playerID string, power int) {
 	b.Healthy -= power
 	b.SetHealthy(b.Healthy)
 	if b.Healthy <= 0 {
 		b.Remove()
+		player := network.ComponentHub.FindComponent(playerID)
+		if player != nil {
+			player.Refer.(*Player).SendReward(10000)
+		}
 	}
 }
 
@@ -282,6 +287,7 @@ func (b *Boss) OnRemove() {
 type Bullet struct {
 	*network.NetworkComponent
 	Game      *FireGame
+	PlayerID  string
 	Position  Vec
 	Radius    float64
 	Direct    Vec
@@ -290,10 +296,11 @@ type Bullet struct {
 	startTime time.Time
 }
 
-func NewBullet(game *FireGame, cid string, power int) (bullet *Bullet) {
+func NewBullet(game *FireGame, playerID string, cid string, power int) (bullet *Bullet) {
 	bullet = &Bullet{
 		NetworkComponent: network.NewNetworkComponent(FactoryTypeBullet, game.Group, cid),
 		Game:             game,
+		PlayerID:         playerID,
 		Position:         Vec{0, 0},
 		Radius:           16,
 		Direct:           Vec{0, 1},
@@ -357,7 +364,7 @@ func (b *Bullet) collision(delta float64) {
 
 	//boss
 	if !b.Game.boss.Removed && p.Sub(b.Game.boss.Position).Length() <= b.Game.boss.Radius {
-		b.Game.boss.Hurt(b.Power)
+		b.Game.boss.Hurt(b.PlayerID, b.Power)
 		b.Remove()
 	}
 }
@@ -387,12 +394,14 @@ func NewPlayer(game *FireGame, cid string) (player *Player) {
 		NetworkComponent: network.NewNetworkComponent(FactoryTypePlayer, game.Group, cid),
 		Game:             game,
 	}
+	player.Refer = player
 	player.SetName("")
 	player.SetSeat(0)
 	player.SetWeaponUsing(0)
 	player.SetWeaponAngle(0)
 	player.SetWeaponDirect(Vec{0, 1})
 	player.RegisterNetworkProp()
+	player.RegisterNetworkTrigger("reward", player.OnReward)
 	player.RegisterNetworkCall("switch", player.OnSwitchWeapon)
 	player.RegisterNetworkCall("turn", player.OnTurnTo)
 	player.RegisterNetworkCall("fire", player.OnFireTo)
@@ -435,7 +444,7 @@ func (p *Player) turnTo(arg Vec) {
 }
 
 func (p *Player) createBullet() *Bullet {
-	var b = NewBullet(p.Game, uuid.New(), p.WeaponUsing+1)
+	var b = NewBullet(p.Game, p.CID, uuid.New(), p.WeaponUsing+1)
 	var pos = p.Position.Add(p.WeaponDirect.Mul(50))
 	b.SetPosition(pos)
 	b.SetDirect(p.WeaponDirect)
@@ -448,8 +457,16 @@ func (p *Player) fireTo(arg Vec) {
 	p.Game.AddBulllet(p.createBullet())
 }
 
+func (p *Player) SendReward(v float64) {
+	p.NetworkTrigger("reward", v)
+}
+
 func (p *Player) Remove() {
 	p.Removed = true
+}
+
+func (p *Player) OnReward(v float64) {
+	network.Infof("Game(%v) reward %v", p.Group, v)
 }
 
 func (p *Player) OnSwitchWeapon(ctx *network.NetworkSession, uuid string) (err error) {

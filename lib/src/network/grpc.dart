@@ -26,6 +26,7 @@ extension on NetworkSyncDataComponent {
       owner: nOwner,
       removed: nRemoved,
       props: jsonEncode(nProps),
+      triggers: jsonEncode(nTriggers),
     );
   }
 }
@@ -38,6 +39,7 @@ extension on SyncDataComponent {
       nOwner: owner,
       nRemoved: removed,
       nProps: jsonDecode(props),
+      nTriggers: jsonDecode(triggers),
     );
   }
 }

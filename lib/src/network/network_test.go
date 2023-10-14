@@ -37,6 +37,8 @@ func NewTestNetworkComponent() (c *TestNetworkComponent) {
 	c.SetValue("p0", 123)
 	c.SetValue("p1", "abc")
 	c.RegisterNetworkProp()
+	c.RegisterNetworkTrigger("t0", c.onTrigger0)
+	c.RegisterNetworkTrigger("t1", c.onTrigger1)
 	c.RegisterNetworkCall("c0", c.onCall0)
 	c.RegisterNetworkCall("c1", c.onCall1)
 	c.RegisterNetworkCall("c2", c.onCall2)
@@ -50,6 +52,14 @@ func NewTestNetworkComponent() (c *TestNetworkComponent) {
 
 func (t *TestNetworkComponent) onPropAll(key string, value interface{}) {
 	fmt.Printf("on prop %v=>%v\n", key, value)
+}
+
+func (t *TestNetworkComponent) onTrigger0(v float64) {
+	fmt.Printf("on trigger =>%v\n", v)
+}
+
+func (t *TestNetworkComponent) onTrigger1(n string, v string) {
+	fmt.Printf("on trigger %v=>%v\n", n, v)
 }
 
 func (t *TestNetworkComponent) onCall0(ctx *NetworkSession, uuid string) (ret string, err error) {
@@ -97,7 +107,9 @@ func (t *TestNetworkComponent) OnNetworkPing(conn NetworkConnection, ping time.D
 func (t *TestNetworkComponent) Unregister() {
 	t.Clear()
 	t.UnregisterNetworkProp()
+	t.UnregisterNetworkTrigger("t0")
 	t.UnregisterNetworkCall("c0")
+	t.ClearNetworkTrigger()
 	t.ClearNetworkCall()
 	t.UnregisterNetworkEvent(t)
 }
@@ -140,16 +152,16 @@ func (t *TestNetworkTransport) Start() (err error) {
 		session: Network.NetworkSession,
 	}
 	t.callback = Network
-	go func() {
-		t.callback.OnNetworkState(NetworkConnectionSet{t.conn.ID(): t.conn}, t.conn, NetworkStateReady, nil)
-		Network.OnNetworkPing(t.conn, time.Second)
-	}()
+	// go func() {
+	// 	t.callback.OnNetworkState(NetworkConnectionSet{t.conn.ID(): t.conn}, t.conn, NetworkStateReady, nil)
+	// 	Network.OnNetworkPing(t.conn, time.Second)
+	// }()
 	return
 }
 func (t *TestNetworkTransport) Stop() (err error) {
-	go func() {
-		t.callback.OnNetworkState(NetworkConnectionSet{t.conn.ID(): t.conn}, t.conn, NetworkStateClosed, nil)
-	}()
+	// go func() {
+	// 	t.callback.OnNetworkState(NetworkConnectionSet{t.conn.ID(): t.conn}, t.conn, NetworkStateClosed, nil)
+	// }()
 	return
 }
 func (t *TestNetworkTransport) NetworkSync(data *NetworkSyncData) {
@@ -163,7 +175,7 @@ func (t *TestNetworkTransport) NetworkCall(arg *NetworkCallArg) (ret *NetworkCal
 func TestNetwork(t *testing.T) {
 	tester := xdebug.CaseTester{
 		0: 1,
-		5: 1,
+		3: 1,
 	}
 	Network.IsServer = true
 	Network.IsClient = true
@@ -255,6 +267,45 @@ func TestNetwork(t *testing.T) {
 			t.Errorf("cs is %v", len(cs))
 			return
 		}
+		nc.Unregister()
+	}
+	if tester.Run() { //NetworkComponent.trigger
+		nc := NewTestNetworkComponent()
+		err := nc.NetworkTrigger("t0", 1.1)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = nc.NetworkTrigger("t1", "abc")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		cs := ComponentHub.SyncSend("*", false)
+		if len(cs) != 1 {
+			t.Errorf("cs is %v", len(cs))
+			return
+		}
+		ComponentHub.SyncRecv("*", cs, false)
+
+		nc.RecvNetworkTrigger(xmap.M{"none": "123"})
+		nc.RecvNetworkTrigger(xmap.M{"t0": ""})
+		nc.RecvNetworkTrigger(xmap.M{"t0": "[x]"})
+
+		if err = nc.RegisterNetworkTrigger("none", func() {}); err == nil {
+			t.Error("error")
+			return
+		}
+		if err = nc.RegisterNetworkTrigger("t0", func(int) {}); err == nil {
+			t.Error("error")
+			return
+		}
+		if err = nc.NetworkTrigger("none", 1); err == nil {
+			t.Error("error")
+			return
+		}
+
 		nc.Unregister()
 	}
 	if tester.Run() { //NetworkComponent.create

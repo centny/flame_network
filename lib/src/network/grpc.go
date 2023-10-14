@@ -109,6 +109,7 @@ func ParseSyncDataGRPC(data *NetworkSyncData) (sd *grpc.SyncData) {
 			Owner:       c.Owner,
 			Removed:     c.Removed,
 			Props:       converter.JSON(props),
+			Triggers:    converter.JSON(c.Triggers),
 		})
 	}
 	return
@@ -126,12 +127,18 @@ func ParseNetworkSyncDataGRPC(sd *grpc.SyncData) (data *NetworkSyncData) {
 			Warnf("[GRPC] parse network component props on %v/%v error %v", c.FactoryType, c.Cid, xerr)
 			continue
 		}
+		triggers, xerr := xmap.MapVal(c.Triggers)
+		if xerr != nil {
+			Warnf("[GRPC] parse network component trigger on %v/%v error %v", c.FactoryType, c.Cid, xerr)
+			continue
+		}
 		data.Components = append(data.Components, &NetworkSyncDataComponent{
-			Factory: c.FactoryType,
-			CID:     c.Cid,
-			Owner:   c.Owner,
-			Removed: c.Removed,
-			Props:   props,
+			Factory:  c.FactoryType,
+			CID:      c.Cid,
+			Owner:    c.Owner,
+			Removed:  c.Removed,
+			Props:    props,
+			Triggers: triggers,
 		})
 	}
 	return

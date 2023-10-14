@@ -189,6 +189,7 @@ class SyncDataComponent extends $pb.GeneratedMessage {
     $core.String? owner,
     $core.bool? removed,
     $core.String? props,
+    $core.String? triggers,
   }) {
     final $result = create();
     if (factoryType != null) {
@@ -206,6 +207,9 @@ class SyncDataComponent extends $pb.GeneratedMessage {
     if (props != null) {
       $result.props = props;
     }
+    if (triggers != null) {
+      $result.triggers = triggers;
+    }
     return $result;
   }
   SyncDataComponent._() : super();
@@ -218,6 +222,7 @@ class SyncDataComponent extends $pb.GeneratedMessage {
     ..aOS(3, _omitFieldNames ? '' : 'owner')
     ..aOB(4, _omitFieldNames ? '' : 'removed')
     ..aOS(5, _omitFieldNames ? '' : 'props')
+    ..aOS(6, _omitFieldNames ? '' : 'triggers')
     ..hasRequiredFields = false
   ;
 
@@ -286,6 +291,15 @@ class SyncDataComponent extends $pb.GeneratedMessage {
   $core.bool hasProps() => $_has(4);
   @$pb.TagNumber(5)
   void clearProps() => clearField(5);
+
+  @$pb.TagNumber(6)
+  $core.String get triggers => $_getSZ(5);
+  @$pb.TagNumber(6)
+  set triggers($core.String v) { $_setString(5, v); }
+  @$pb.TagNumber(6)
+  $core.bool hasTriggers() => $_has(5);
+  @$pb.TagNumber(6)
+  void clearTriggers() => clearField(6);
 }
 
 class SyncArg extends $pb.GeneratedMessage {
