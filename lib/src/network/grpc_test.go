@@ -4,8 +4,11 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
+	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +16,7 @@ import (
 	"github.com/codingeasygo/util/xcrypto"
 	"github.com/codingeasygo/util/xdebug"
 	"github.com/codingeasygo/util/xmap"
+	"golang.org/x/net/websocket"
 	ggrpc "google.golang.org/grpc"
 )
 
@@ -21,10 +25,16 @@ func TestGRPC(t *testing.T) {
 		0: 1,
 		3: 1,
 	}
+	newTestTransport := func() *NetworkTransportGRPC {
+		n := NewNetworkTransportGRPC()
+		n.GrpcAddress, _ = url.Parse("grpc://127.0.0.1:50060")
+		n.WebAddress, _ = url.Parse("ws://127.0.0.1:50061/")
+		return n
+	}
 	Network.IsServer = true
 	Network.IsClient = true
 	Network.SetGroup("test")
-	Network.Transport = NewNetworkTransportGRPC()
+	Network.Transport = newTestTransport()
 	if tester.Run() { //NetworkManager.sync
 		err := Network.Start()
 		if err != nil {
@@ -51,7 +61,6 @@ func TestGRPC(t *testing.T) {
 
 		nc.Unregister()
 
-		fmt.Println("--->")
 		Network.Stop()
 	}
 	if tester.Run() { //NetworkManager.keep
@@ -67,6 +76,68 @@ func TestGRPC(t *testing.T) {
 
 		Network.Stop()
 	}
+	if tester.Run() { //NetworkManager.web
+		Network.Transport.(*NetworkTransportGRPC).GrpcOn = false
+		Network.Transport.(*NetworkTransportGRPC).WebOn = true
+		err := Network.Start()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		nc := NewTestNetworkComponent()
+
+		Network.Sync("*")
+
+		var ret0 string
+		if err := nc.NetworkCall("c0", nil, &ret0); err != nil || ret0 != "test" {
+			t.Errorf("err:%v,ret:%v", err, ret0)
+			return
+		}
+		if err := nc.NetworkCall("e0", nil, nil); err == nil {
+			t.Errorf("err:%v", err)
+			return
+		}
+
+		nc.Unregister()
+
+		Network.Stop()
+
+		err = nc.NetworkCall("c0", nil, &ret0)
+		if err == nil {
+			t.Errorf("err:%v,ret:%v", err, ret0)
+			return
+		}
+		fmt.Printf("stopped error is %v\n", err)
+
+		Network.Transport.(*NetworkTransportGRPC).GrpcOn = true
+		Network.Transport.(*NetworkTransportGRPC).WebOn = true
+
+		n := newTestTransport()
+		n.GrpcOn = false
+		n.WebOn = true
+		for i := 0; i < 3; i++ {
+			err := n.Start()
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			n.Stop()
+		}
+
+		ts := httptest.NewServer(websocket.Handler(func(c *websocket.Conn) {
+			conn := &NetworkWebsocketConnGRPC{Conn: c}
+			io.Copy(conn, conn)
+		}))
+		conn, _ := websocket.Dial(strings.ReplaceAll(ts.URL, "http://", "ws://"), "", ts.URL)
+		fmt.Fprintf(conn, "1,2,3")
+		conn.Read(make([]byte, 1024))
+		fmt.Fprintf(conn, "a,b,c")
+		conn.Read(make([]byte, 1024))
+		conn.Close()
+
+		w := NewNetworkWebsocketServerGRPC()
+		fmt.Printf("-->%v,%v\n", w.Network(), w)
+	}
 	if tester.Run() { //NetworkManager.tls
 		xcrypto.GenerateWebServerClient("test.loc", "test.loc", "test.loc", "127.0.0.1", 2048)
 		_, _, rootCertPEM, rootKeyPEM, _, severCertPEM, serverKeyPEM, _, clientCertPEM, clientKeyPEM, _ := xcrypto.GenerateWebServerClient("test.loc", "test.loc", "test.loc", "127.0.0.1", 2048)
@@ -81,7 +152,7 @@ func TestGRPC(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		n := NewNetworkTransportGRPC()
+		n := newTestTransport()
 		n.ServerConfig = &tls.Config{Certificates: []tls.Certificate{cer}}
 		n.ConnConfig = &tls.Config{InsecureSkipVerify: true}
 		err = n.Start()

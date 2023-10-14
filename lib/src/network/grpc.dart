@@ -373,25 +373,43 @@ class HandledServerConnectionGRPC implements ServerTransportConnection {
   Stream<ServerTransportStream> get incomingStreams => HandleableStream(stream: conn.incomingStreams, onError: onError, onDone: onDone);
 }
 
-class HandledWrapperStreamSink implements StreamSink<List<int>> {
+class CastStreamSinkGRPC implements StreamSink<List<int>> {
   StreamSink<dynamic> base;
 
-  HandledWrapperStreamSink(this.base);
+  CastStreamSinkGRPC(this.base);
 
   @override
-  void add(List<int> event) => base.add(String.fromCharCodes(event));
+  void add(List<int> event) => base.add(event);
 
   @override
   void addError(Object error, [StackTrace? stackTrace]) => base.addError(error, stackTrace);
 
   @override
-  Future addStream(Stream<List<int>> stream) => base.addStream(stream.map((event) => String.fromCharCodes(event)));
+  Future addStream(Stream<List<int>> stream) async {
+    var c = Completer();
+    stream.listen(add, onDone: () => c.complete(), onError: (e) => c.complete());
+    return c.future;
+  }
 
   @override
   Future close() => base.close();
 
   @override
   Future get done => base.done;
+}
+
+List<int> caseStreamEventGRPC(dynamic v) {
+  if (v is List<int>) {
+    return v;
+  }
+  if (v is String) {
+    List<int> all = [];
+    for (var s in v.split(",")) {
+      all.add(int.parse(s));
+    }
+    return all;
+  }
+  throw Exception("not supported type ${v.runtimeType}");
 }
 
 class HandledServerGRPC extends Server {
@@ -434,12 +452,9 @@ class HandledServerGRPC extends Server {
     _webServer!.listen((request) async {
       L.i("[WEB] receive request ${request.uri} from ${request.connectionInfo?.remoteAddress.address}:${request.connectionInfo?.remotePort}");
       request.response.headers.contentType = ContentType.binary;
-      var socket = await WebSocketTransformer.upgrade(
-        request,
-        protocolSelector: (protocols) => "grpc",
-      );
-      var stream = socket.map((event) => asListInt(event));
-      var sink = HandledWrapperStreamSink(socket);
+      var socket = await WebSocketTransformer.upgrade(request);
+      var stream = socket.map(caseStreamEventGRPC);
+      var sink = CastStreamSinkGRPC(socket);
       final connection = ServerTransportConnection.viaStreams(stream, sink, settings: http2ServerSettings);
       await serveConnection(
         connection: connection,
@@ -468,17 +483,16 @@ class WebSocketChannelConnector extends ClientTransportConnector {
   ClientSettings? settings;
   late WebSocketChannel channel;
 
-  WebSocketChannelConnector(this.address, {this.settings}) {
-    channel = WebSocketChannel.connect(address, protocols: ["grpc"]);
-  }
+  WebSocketChannelConnector(this.address, {this.settings}) {}
 
   @override
   String get authority => "";
 
   @override
   Future<ClientTransportConnection> connect() async {
-    var stream = channel.stream.map((event) => asListInt(event));
-    var sink = HandledWrapperStreamSink(channel.sink);
+    channel = WebSocketChannel.connect(address);
+    var stream = channel.stream.map(caseStreamEventGRPC);
+    var sink = CastStreamSinkGRPC(channel.sink);
     return ClientTransportConnection.viaStreams(stream, sink, settings: settings);
   }
 

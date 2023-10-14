@@ -104,6 +104,13 @@ class TestNetworkConnection with NetworkConnection {
 void main() {
   NetworkManagerGRPC.shared.grpcAddress = Uri(scheme: "grpc", host: "127.0.0.1", port: 51051);
   NetworkManagerGRPC.shared.webAddress = Uri(scheme: "ws", host: "127.0.0.1", port: 51052);
+  test('caseStreamEventGRPC', () {
+    caseStreamEventGRPC("1,2,3");
+    caseStreamEventGRPC([1]);
+    try {
+      caseStreamEventGRPC(1);
+    } catch (_) {}
+  });
   test('NetworkGRPC.sync', () async {
     var nc = TestNetworkComponent();
     var callback = TestNetworkCallback();

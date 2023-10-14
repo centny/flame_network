@@ -1,12 +1,15 @@
 package network
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,6 +19,7 @@ import (
 	"github.com/codingeasygo/util/xdebug"
 	"github.com/codingeasygo/util/xmap"
 	"github.com/codingeasygo/util/xtime"
+	"golang.org/x/net/websocket"
 	ggrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -504,6 +508,128 @@ func (n *NetworkClientGRPC) Close() (err error) {
 	return
 }
 
+type NetworkWebsocketResponseWriterGRPC struct {
+	http.ResponseWriter
+}
+
+func (n *NetworkWebsocketResponseWriterGRPC) Hijack() (conn net.Conn, buffer *bufio.ReadWriter, err error) {
+	c := &NetworkWebsocketResponseConnGRPC{}
+	c.Conn, buffer, err = n.ResponseWriter.(http.Hijacker).Hijack()
+	conn = c
+	return
+}
+
+type NetworkWebsocketResponseConnGRPC struct {
+	net.Conn
+	accepted bool
+}
+
+func (n *NetworkWebsocketResponseConnGRPC) Close() (err error) {
+	if n.accepted {
+		err = n.Conn.Close()
+	} else {
+		n.accepted = true
+	}
+	return
+}
+
+type NetworkWebsocketConnGRPC struct {
+	*websocket.Conn
+}
+
+func (n *NetworkWebsocketConnGRPC) Read(p []byte) (s int, err error) {
+	codec := &websocket.Codec{
+		Unmarshal: func(data []byte, payloadType byte, v interface{}) (err error) {
+			switch payloadType {
+			case websocket.TextFrame: //for web browser
+				for i, d := range strings.Split(string(data), ",") {
+					v, xerr := strconv.ParseInt(d, 10, 8)
+					if xerr != nil {
+						err = xerr
+						break
+					}
+					p[i] = byte(v)
+					s++
+				}
+			default:
+				s = copy(p, data)
+			}
+			return
+		},
+	}
+	err = codec.Receive(n.Conn, nil)
+	return
+}
+
+func (n *NetworkWebsocketConnGRPC) Write(p []byte) (s int, err error) {
+	codec := &websocket.Codec{
+		Marshal: func(v interface{}) (data []byte, payloadType byte, err error) {
+			s = len(p)
+			data = p
+			payloadType = websocket.BinaryFrame
+			return
+		},
+	}
+	err = codec.Send(n.Conn, nil)
+	return
+}
+
+type NetworkWebsocketServerGRPC struct {
+	Websocket *websocket.Server
+	accepter  chan net.Conn
+	closed    bool
+}
+
+func NewNetworkWebsocketServerGRPC() (server *NetworkWebsocketServerGRPC) {
+	server = &NetworkWebsocketServerGRPC{
+		Websocket: &websocket.Server{},
+		accepter:  make(chan net.Conn, 8),
+	}
+	server.Websocket.Handler = server.handleWS
+	return
+}
+
+func (n *NetworkWebsocketServerGRPC) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	n.Websocket.ServeHTTP(&NetworkWebsocketResponseWriterGRPC{ResponseWriter: res}, req)
+}
+
+func (n *NetworkWebsocketServerGRPC) handleWS(c *websocket.Conn) {
+	n.accepter <- &NetworkWebsocketConnGRPC{Conn: c}
+}
+
+func (n *NetworkWebsocketServerGRPC) Accept() (conn net.Conn, err error) {
+	n.closed = false
+	c := <-n.accepter
+	if c == nil {
+		err = fmt.Errorf("closed")
+		return
+	}
+	conn = c
+	return
+}
+
+func (n *NetworkWebsocketServerGRPC) Close() (err error) {
+	if n.closed {
+		err = fmt.Errorf("closed")
+		return
+	}
+	n.closed = true
+	n.accepter <- nil
+	return
+}
+
+func (n *NetworkWebsocketServerGRPC) Addr() net.Addr {
+	return n
+}
+
+func (n *NetworkWebsocketServerGRPC) Network() string {
+	return "WebsocketTransport"
+}
+
+func (n *NetworkWebsocketServerGRPC) String() string {
+	return "WebsocketTransport"
+}
+
 type NetworkTransportGRPC struct {
 	GrpcOn       bool
 	WebOn        bool
@@ -518,6 +644,9 @@ type NetworkTransportGRPC struct {
 	WebListener  net.Listener
 	ServerConfig *tls.Config
 	ConnConfig   *tls.Config
+	WebMux       *http.ServeMux
+	Websocket    *NetworkWebsocketServerGRPC
+	initial      bool
 	running      bool
 	exiter       chan int
 	waiter       sync.WaitGroup
@@ -531,11 +660,13 @@ func NewNetworkTransportGRPC() (transport *NetworkTransportGRPC) {
 		exiter:   make(chan int, 8),
 		waiter:   sync.WaitGroup{},
 	}
-	transport.GrpcAddress, _ = url.Parse("grpc://127.0.0.1:50051")
-	transport.WebAddress, _ = url.Parse("ws://127.0.0.1:50052")
+	transport.GrpcAddress, _ = url.Parse("grpc://127.0.0.1:50051/")
+	transport.WebAddress, _ = url.Parse("ws://127.0.0.1:50052/")
 	transport.Server = NewNetworkServerGRPC(Network)
 	transport.GrpcServer = ggrpc.NewServer()
-	transport.WebServer = &http.Server{}
+	transport.WebMux = http.NewServeMux()
+	transport.Websocket = NewNetworkWebsocketServerGRPC()
+	transport.WebServer = &http.Server{Handler: transport.Websocket}
 	grpc.RegisterServerServer(transport.GrpcServer, transport.Server)
 	return
 }
@@ -555,24 +686,39 @@ func (n *NetworkTransportGRPC) serveWeb(ln net.Listener) {
 }
 
 func (n *NetworkTransportGRPC) connect() (err error) {
-	if n.GrpcOn {
-		if n.Client != nil {
-			n.Client.Close()
-		}
-		ctx, cancel := context.WithTimeout(NewOutgoingContext(context.Background(), Network.NetworkSession), Network.Timeout)
-		defer cancel()
-		opts := n.GrpcOpts
-		if n.ConnConfig != nil {
-			opts = append(opts, ggrpc.WithTransportCredentials(credentials.NewTLS(n.ConnConfig)))
-		}
-		connection, xerr := ggrpc.DialContext(ctx, n.GrpcAddress.Host, opts...)
-		if xerr != nil {
-			err = xerr
-			return
-		}
-		n.Client = NewNetworkClientGRPC(connection, Network)
-		err = n.Client.Start()
+	if n.Client != nil {
+		n.Client.Close()
 	}
+	opts := n.GrpcOpts
+	if !n.GrpcOn {
+		opts = append(opts, ggrpc.WithContextDialer(func(ctx context.Context, s string) (conn net.Conn, err error) {
+			originURL := n.WebAddress.String()
+			originURL = strings.ReplaceAll(originURL, "ws://", "http://")
+			originURL = strings.ReplaceAll(originURL, "wss://", "https://")
+			origin, _ := url.Parse(originURL)
+			config := &websocket.Config{
+				Location:  n.WebAddress,
+				Origin:    origin,
+				TlsConfig: n.ConnConfig,
+				Version:   websocket.ProtocolVersionHybi13,
+			}
+			wcon, err := websocket.DialConfig(config)
+			conn = &NetworkWebsocketConnGRPC{Conn: wcon}
+			return
+		}))
+	}
+	if n.ConnConfig != nil {
+		opts = append(opts, ggrpc.WithTransportCredentials(credentials.NewTLS(n.ConnConfig)))
+	}
+	ctx, cancel := context.WithTimeout(NewOutgoingContext(context.Background(), Network.NetworkSession), Network.Timeout)
+	defer cancel()
+	connection, xerr := ggrpc.DialContext(ctx, n.GrpcAddress.Host, opts...)
+	if xerr != nil {
+		err = xerr
+		return
+	}
+	n.Client = NewNetworkClientGRPC(connection, Network)
+	err = n.Client.Start()
 	return
 }
 
@@ -623,6 +769,10 @@ func (n *NetworkTransportGRPC) createListener(host string) (ln net.Listener, err
 }
 
 func (n *NetworkTransportGRPC) Start() (err error) {
+	if !n.initial {
+		n.WebMux.Handle(n.WebAddress.Path, n.Websocket)
+		n.initial = true
+	}
 	if Network.IsServer {
 		if n.GrpcOn {
 			n.GrpcListener, err = n.createListener(n.GrpcAddress.Host)
@@ -642,6 +792,8 @@ func (n *NetworkTransportGRPC) Start() (err error) {
 			go n.serveWeb(n.WebListener)
 			n.running = true
 		}
+		n.waiter.Add(1)
+		go n.serveGRPC(n.Websocket)
 	}
 	if Network.IsClient {
 		if n.GrpcOn || n.WebOn {
@@ -676,6 +828,7 @@ func (n *NetworkTransportGRPC) Stop() (err error) {
 		n.Client = nil
 	}
 	n.Server.Close()
+	n.Websocket.Close()
 	n.waiter.Wait()
 	return
 }
@@ -687,6 +840,10 @@ func (n *NetworkTransportGRPC) NetworkSync(data *NetworkSyncData) {
 }
 
 func (n *NetworkTransportGRPC) NetworkCall(arg *NetworkCallArg) (ret *NetworkCallResult, err error) {
+	if !Network.IsClient || n.Client == nil {
+		err = fmt.Errorf("not client or not connect")
+		return
+	}
 	ret, err = n.Client.NetworkCall(arg)
 	return
 }
