@@ -195,6 +195,10 @@ func (n *NetworkSyncStreamGRPC) Send(data *grpc.SyncData) (err error) {
 	return
 }
 
+func (n *NetworkSyncStreamGRPC) NetworkSync(data *NetworkSyncData) {
+	n.Send(ParseSyncDataGRPC(data))
+}
+
 func (n *NetworkSyncStreamGRPC) Close() (err error) {
 	select {
 	case n.closer <- "closed":
