@@ -40,6 +40,24 @@ extension Vector3Extension on Vector3 {
   NetworkVector3 asNetwork() => NetworkVector3(x, y, z);
 }
 
+class NetworkAccessValue<T> with NetworkValue {
+  T value;
+  final bool Function(NetworkSession s) _access;
+
+  NetworkAccessValue(T defaultValue, bool Function(NetworkSession s) access)
+      : value = defaultValue,
+        _access = access;
+
+  @override
+  void decode(v) => value = jsonDecode(v);
+
+  @override
+  dynamic encode() => jsonEncode(value);
+
+  @override
+  bool access(NetworkSession s) => _access(s);
+}
+
 class NetworkPropVector2 extends NetworkProp<Vector2> {
   NetworkPropVector2(super.name, super.defaultValue);
 
@@ -83,18 +101,13 @@ class NetworkPropList<T> extends NetworkProp<List<T>> {
   void decode(v) => value = (jsonDecode(v) as List<dynamic>).map((e) => e as T).toList();
 }
 
-class NetworkAccessValue<T> with NetworkValue {
-  T value;
-  final bool Function(NetworkSession s) _access;
+class NetworkAccessProp<T> extends NetworkProp<NetworkAccessValue<T>> {
+  T get raw => super.value.value;
+  set raw(T v) => super.value.value = v;
 
-  NetworkAccessValue(this.value, this._access);
+  NetworkAccessProp(String name, T defaultValue, bool Function(NetworkSession s) access) : super(name, NetworkAccessValue(defaultValue, access));
+}
 
-  @override
-  void decode(v) => value = jsonDecode(v);
-
-  @override
-  dynamic encode() => jsonEncode(value);
-
-  @override
-  bool access(NetworkSession s) => _access(s);
+class NetworkAccessTrigger<T> extends NetworkTrigger<NetworkAccessValue<T>> {
+  NetworkAccessTrigger(String name, T defaultValue, bool Function(NetworkSession s) access) : super(name, valNew: () => NetworkAccessValue(defaultValue, access));
 }

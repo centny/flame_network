@@ -4,6 +4,22 @@ import 'package:flame_network/src/common/log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+class TestNetworkManager extends NetworkManager with NetworkCallback {
+  TestNetworkManager() {
+    standalone = true;
+  }
+
+  @override
+  Future<NetworkCallResult> networkCall(NetworkCallArg arg) {
+    throw Exception("abc");
+  }
+
+  @override
+  Future<void> networkSync(NetworkSyncData data) {
+    throw Exception("abc");
+  }
+}
+
 void main() {
   test('NetworkVector', () {
     var v2 = NetworkVector2(0, 0);
@@ -20,6 +36,13 @@ void main() {
     assert(v3.y == 1);
     assert(v3.z == 1);
     Vector3.zero().asNetwork();
+  });
+  test('NetworkAccessValue', () {
+    var v = NetworkAccessValue<int>(1, (s) => true);
+    assert(v.access(DefaultNetworkSession.create()));
+    v.decode("2");
+    assert(v.value == 2);
+    v.encode();
   });
   test('NetworkPropVector', () {
     var v2 = NetworkPropVector2("v2", Vector2.zero());
@@ -51,11 +74,16 @@ void main() {
     v.decode("[2]");
     assert(v.value[0] == 2);
   });
-  test('NetworkAccessValue', () {
-    var v = NetworkAccessValue<int>(1, (s) => true);
-    assert(v.access(DefaultNetworkSession.create()));
+  test('NetworkAccessProp', () {
+    var v = NetworkAccessProp<int>("abc", 1, (s) => true);
     v.decode("2");
-    assert(v.value == 2);
+    assert(v.raw == 2);
     v.encode();
+    v.raw = 2;
+  });
+  test('NetworkAccessTrigger', () {
+    TestNetworkManager();
+    var v = NetworkAccessTrigger<int>("abc", 1, (s) => true);
+    v.syncRecv(["2"]);
   });
 }
