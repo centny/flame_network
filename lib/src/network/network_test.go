@@ -23,6 +23,14 @@ type TestNetworkCallRet struct {
 	Value int `json:"value"`
 }
 
+type TestNetworkValue struct {
+	User string
+}
+
+func (t *TestNetworkValue) Access(session NetworkSession) bool {
+	return t.User == session.User()
+}
+
 type TestNetworkComponent struct {
 	*NetworkComponent
 }
@@ -36,9 +44,11 @@ func NewTestNetworkComponent() (c *TestNetworkComponent) {
 	c.OnPropUpdate["p0"] = c.onPropAll
 	c.SetValue("p0", 123)
 	c.SetValue("p1", "abc")
+	c.SetValue("p2", &TestNetworkValue{})
 	c.RegisterNetworkProp()
 	c.RegisterNetworkTrigger("t0", c.onTrigger0)
 	c.RegisterNetworkTrigger("t1", c.onTrigger1)
+	c.RegisterNetworkTrigger("t2", c.onTrigger2)
 	c.RegisterNetworkCall("c0", c.onCall0)
 	c.RegisterNetworkCall("c1", c.onCall1)
 	c.RegisterNetworkCall("c2", c.onCall2)
@@ -59,6 +69,10 @@ func (t *TestNetworkComponent) onTrigger0(v float64) {
 }
 
 func (t *TestNetworkComponent) onTrigger1(n string, v string) {
+	fmt.Printf("on trigger %v=>%v\n", n, v)
+}
+
+func (t *TestNetworkComponent) onTrigger2(n string, v *TestNetworkValue) {
 	fmt.Printf("on trigger %v=>%v\n", n, v)
 }
 
@@ -175,7 +189,7 @@ func (t *TestNetworkTransport) NetworkCall(arg *NetworkCallArg) (ret *NetworkCal
 func TestNetwork(t *testing.T) {
 	tester := xdebug.CaseTester{
 		0: 1,
-		3: 1,
+		4: 1,
 	}
 	Network.IsServer = true
 	Network.IsClient = true
@@ -281,17 +295,23 @@ func TestNetwork(t *testing.T) {
 			t.Error(err)
 			return
 		}
-
-		cs := ComponentHub.SyncSend("*", false)
-		if len(cs) != 1 {
-			t.Errorf("cs is %v", len(cs))
+		err = nc.NetworkTrigger("t2", &TestNetworkValue{})
+		if err != nil {
+			t.Error(err)
 			return
 		}
-		ComponentHub.SyncRecv("*", cs, false)
+
+		cs := NewNetworkSyncDataBySyncSend("*", false)
+		if len(cs.Components) != 1 {
+			t.Errorf("cs is %v", len(cs.Components))
+			return
+		}
+		cs = cs.Encode(Network.NetworkSession)
+		ComponentHub.SyncRecv("*", cs.Components, false)
 
 		nc.RecvNetworkTrigger(xmap.M{"none": "123"})
-		nc.RecvNetworkTrigger(xmap.M{"t0": ""})
-		nc.RecvNetworkTrigger(xmap.M{"t0": "[x]"})
+		nc.RecvNetworkTrigger(xmap.M{"t0": []interface{}{}})
+		nc.RecvNetworkTrigger(xmap.M{"t0": []interface{}{"x"}})
 
 		if err = nc.RegisterNetworkTrigger("none", func() {}); err == nil {
 			t.Error("error")

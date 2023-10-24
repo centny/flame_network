@@ -59,6 +59,13 @@ void main() {
     v.decode("[2]");
     assert(v.value[0] == 2);
   });
+  test('NetworkAccessValue', () {
+    var v = NetworkAccessValue<int>(1, (s) => true);
+    assert(v.access(DefaultNetworkSession.create()));
+    v.decode("2");
+    assert(v.value == 2);
+    v.encode();
+  });
   test('GameLoop', () async {
     var c = Completer();
     var loop = GameLoop((dt) {

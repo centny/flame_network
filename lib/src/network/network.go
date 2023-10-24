@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
@@ -134,6 +133,15 @@ type NetworkEvent interface {
 	OnNetworkPing(conn NetworkConnection, ping time.Duration)
 }
 
+func jsonEncode(v interface{}) string {
+	switch v.(type) {
+	case float32, float64:
+		return fmt.Sprintf("%.02f", v)
+	default:
+		return converter.JSON(v)
+	}
+}
+
 type NetworkSyncDataComponent struct {
 	Factory  string
 	CID      string
@@ -141,6 +149,53 @@ type NetworkSyncDataComponent struct {
 	Removed  bool
 	Props    xmap.M
 	Triggers xmap.M
+}
+
+func EncodeProp(props xmap.M, session NetworkSession) xmap.M {
+	propAll := xmap.M{}
+	for k, v := range props {
+		switch v := v.(type) {
+		case NetworkValue:
+			if v.Access(session) {
+				propAll[k] = jsonEncode(v)
+			}
+		default:
+			propAll[k] = jsonEncode(v)
+		}
+	}
+	return propAll
+}
+
+func EncodeTrigger(triggers xmap.M, session NetworkSession) xmap.M {
+	propAll := xmap.M{}
+	for k, vals := range triggers {
+		valAll := []interface{}{}
+		for _, v := range vals.([]interface{}) {
+			switch v := v.(type) {
+			case NetworkValue:
+				if v.Access(session) {
+					valAll = append(valAll, jsonEncode(v))
+				}
+			default:
+				valAll = append(valAll, jsonEncode(v))
+			}
+		}
+		if len(valAll) > 0 {
+			propAll[k] = valAll
+		}
+	}
+	return propAll
+}
+
+func (n *NetworkSyncDataComponent) Encode(session NetworkSession) *NetworkSyncDataComponent {
+	return &NetworkSyncDataComponent{
+		Factory:  n.Factory,
+		CID:      n.CID,
+		Owner:    n.Owner,
+		Removed:  n.Removed,
+		Props:    EncodeProp(n.Props, session),
+		Triggers: EncodeTrigger(n.Triggers, session),
+	}
 }
 
 type NetworkSyncData struct {
@@ -162,6 +217,19 @@ func NewNetworkSyncDataBySyncSend(group string, whole bool) (data *NetworkSyncDa
 
 func (n *NetworkSyncData) IsUpdated() bool {
 	return len(n.Components) > 0 || n.Whole
+}
+
+func (n *NetworkSyncData) Encode(session NetworkSession) *NetworkSyncData {
+	components := []*NetworkSyncDataComponent{}
+	for _, c := range n.Components {
+		components = append(components, c.Encode(session))
+	}
+	return &NetworkSyncData{
+		UUID:       n.UUID,
+		Group:      n.Group,
+		Whole:      n.Whole,
+		Components: components,
+	}
 }
 
 var Network = NewNetworkManager()
@@ -269,6 +337,10 @@ func (n *NetworkCallResult) String() string {
 	return fmt.Sprintf("NetworkCallArg(uuid:%v,CID:%v,Name:%v,Arg:%v)", n.UUID, n.CID, n.Name, n.Result)
 }
 
+type NetworkValue interface {
+	Access(s NetworkSession) bool
+}
+
 type NetworkComponentSet map[string]*NetworkComponent
 
 type NetworkComponentFactory func(key string, group string, cid string) (c *NetworkComponent, err error)
@@ -362,8 +434,8 @@ func (n *networkTriggerItem) Add(v interface{}) {
 	}
 }
 
-func (n *networkTriggerItem) Send() string {
-	vals := []string{}
+func (n *networkTriggerItem) Send() []interface{} {
+	vals := []interface{}{}
 	callValue := reflect.ValueOf(n.Trigger)
 	callType := callValue.Type()
 	callIn := callType.NumIn()
@@ -376,50 +448,39 @@ func (n *networkTriggerItem) Send() string {
 			} else {
 				callValue.Call([]reflect.Value{reflect.ValueOf(n.Name), reflect.ValueOf(v)})
 			}
-			switch v := v.(type) {
-			case float32, float64:
-				vals = append(vals, fmt.Sprintf("%.02f", v))
-			default:
-				vals = append(vals, converter.JSON(v))
-			}
+			vals = append(vals, v)
 		default:
 			more = false
 		}
 	}
-	if len(vals) < 1 {
-		return ""
-	}
-	return fmt.Sprintf("[%v]", strings.Join(vals, ","))
+	return vals
 }
 
-func (n *networkTriggerItem) Recv(val string) (err error) {
-	if len(val) < 1 {
-		err = fmt.Errorf("value is empty")
+func (n *networkTriggerItem) Recv(vals ...interface{}) (err error) {
+	if len(vals) < 1 {
+		err = fmt.Errorf("vals is empty")
 		return
 	}
 	callValue := reflect.ValueOf(n.Trigger)
 	callType := callValue.Type()
 	callIn := callType.NumIn()
-	var listType reflect.Type
+	var inType reflect.Type
 	if callIn == 1 {
-		listType = callType.In(0)
+		inType = callType.In(0)
 	} else {
-		listType = callType.In(1)
+		inType = callType.In(1)
 	}
-	listValue := reflect.New(reflect.SliceOf(listType))
-	err = json.Unmarshal([]byte(val), listValue.Interface())
-	if err != nil {
-		return
-	}
-	listValue = reflect.Indirect(listValue)
-	listLen := listValue.Len()
-	if callIn == 1 {
-		for i := 0; i < listLen; i++ {
-			callValue.Call([]reflect.Value{listValue.Index(i)})
+	for _, val := range vals {
+		value := reflect.New(inType)
+		err = json.Unmarshal([]byte(val.(string)), value.Interface())
+		if err != nil {
+			return
 		}
-	} else {
-		for i := 0; i < listLen; i++ {
-			callValue.Call([]reflect.Value{reflect.ValueOf(n.Name), listValue.Index(i)})
+		value = reflect.Indirect(value)
+		if callIn == 1 {
+			callValue.Call([]reflect.Value{value})
+		} else {
+			callValue.Call([]reflect.Value{reflect.ValueOf(n.Name), value})
 		}
 	}
 	return
@@ -598,7 +659,7 @@ func (n *NetworkComponent) RecvNetworkTrigger(updated xmap.M) {
 			Warnf("NetworkComponent(%v) trigger %v is not exists for recv", n.CID, name)
 			continue
 		}
-		err := trigger.Recv(converter.String(v))
+		err := trigger.Recv(v.([]interface{})...)
 		if err != nil {
 			Warnf("NetworkComponent(%v) trigger %v recv error %v by %v", n.CID, name, err, v)
 			continue

@@ -39,7 +39,7 @@ extension on SyncDataComponent {
       nOwner: owner,
       nRemoved: removed,
       nProps: jsonDecode(props),
-      nTriggers: jsonDecode(triggers),
+      nTriggers: (jsonDecode(triggers) as Map<String, dynamic>).map((key, value) => MapEntry(key, value as List<dynamic>)),
     );
   }
 }
@@ -218,8 +218,17 @@ class NetworkServerGRPC extends ServerServiceBase {
   }
 
   void networkSync(NetworkSyncData data) {
-    var components = data.components.map((e) => e.wrap());
     for (var conn in _sessionConnGroup(data.group)) {
+      List<SyncDataComponent> components = [];
+      for (var e in data.components) {
+        var c = e.encode(conn);
+        if (c.nRemoved ?? false || (c.nProps?.isNotEmpty ?? false) || (c.nTriggers?.isNotEmpty ?? false)) {
+          components.add(c.wrap());
+        }
+      }
+      if (components.isEmpty) {
+        continue;
+      }
       var syncData = SyncData(id: newRequestID(), group: conn.session.group ?? data.group, whole: data.whole, components: components);
       conn.add(syncData);
     }

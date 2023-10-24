@@ -94,21 +94,12 @@ func ParseSyncDataGRPC(data *NetworkSyncData) (sd *grpc.SyncData) {
 		Whole: data.Whole,
 	}
 	for _, c := range data.Components {
-		props := map[string]string{}
-		for k, v := range c.Props {
-			switch v.(type) {
-			case float32, float64:
-				props[k] = fmt.Sprintf("%.02f", v)
-			default:
-				props[k] = converter.JSON(v)
-			}
-		}
 		sd.Components = append(sd.Components, &grpc.SyncDataComponent{
 			FactoryType: c.Factory,
 			Cid:         c.CID,
 			Owner:       c.Owner,
 			Removed:     c.Removed,
-			Props:       converter.JSON(props),
+			Props:       converter.JSON(c.Props),
 			Triggers:    converter.JSON(c.Triggers),
 		})
 	}
@@ -198,7 +189,7 @@ func (n *NetworkSyncStreamGRPC) Send(data *grpc.SyncData) (err error) {
 }
 
 func (n *NetworkSyncStreamGRPC) NetworkSync(data *NetworkSyncData) {
-	n.Send(ParseSyncDataGRPC(data))
+	n.Send(ParseSyncDataGRPC(data.Encode(n.session)))
 }
 
 func (n *NetworkSyncStreamGRPC) Close() (err error) {
@@ -342,8 +333,8 @@ func (n *NetworkServerGRPC) timeout(max time.Duration) {
 }
 
 func (n *NetworkServerGRPC) NetworkSync(data *NetworkSyncData) {
-	sd := ParseSyncDataGRPC(data)
 	for _, c := range n.groupConnCopy(data.Group) {
+		sd := ParseSyncDataGRPC(data.Encode(c.session))
 		sd.Group = c.session.Group()
 		c.Send(sd)
 	}

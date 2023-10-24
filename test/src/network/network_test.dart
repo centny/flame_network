@@ -21,6 +21,26 @@ class TestNetworkValue with NetworkValue {
   }
 }
 
+class TestNetworkAccess with NetworkValue {
+  String user;
+  int value;
+
+  TestNetworkAccess(this.user, this.value);
+
+  @override
+  void decode(v) {
+    value = jsonDecode(v);
+  }
+
+  @override
+  dynamic encode() {
+    return jsonEncode(value);
+  }
+
+  @override
+  bool access(NetworkSession s) => (s.user ?? "") == user;
+}
+
 class TestNetworkComponent with NetworkComponent, NetworkEvent {
   bool removed = false;
   String cid = "123";
@@ -45,8 +65,11 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
   NetworkProp<String> sString = NetworkProp<String>("string", "");
   NetworkProp<Map<String, dynamic>> sMap = NetworkProp<Map<String, dynamic>>("map", {});
   NetworkProp<TestNetworkValue> sNet = NetworkProp("net", TestNetworkValue());
+  NetworkProp<TestNetworkAccess> sAcc = NetworkProp("acc", TestNetworkAccess("a123", 0));
 
   NetworkTrigger<int> tInt = NetworkTrigger<int>("int");
+  NetworkTrigger<TestNetworkValue> tNet = NetworkTrigger<TestNetworkValue>("net", valNew: TestNetworkValue.new);
+  NetworkTrigger<TestNetworkAccess> tAcc = NetworkTrigger<TestNetworkAccess>("acc", valNew: () => TestNetworkAccess("a123", 0));
 
   NetworkCall<void, int> cUpdate = NetworkCall("update");
   NetworkCall<String, int> cParse = NetworkCall("parse");
@@ -61,7 +84,10 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     registerNetworkProp(sString, getter: () => stringValue, setter: (v) => stringValue = v);
     registerNetworkProp(sMap, getter: () => mapValue, setter: (v) => mapValue = v);
     registerNetworkProp(sNet);
+    registerNetworkProp(sAcc);
     registerNetworkTrigger(tInt, (p0) => L.i("recieve"), done: () => L.i("done"), error: (p0) => L.i("error"));
+    registerNetworkTrigger(tNet, (p0) => L.i("recieve"), done: () => L.i("done"), error: (p0) => L.i("error"));
+    registerNetworkTrigger(tAcc, (p0) => L.i("recieve"), done: () => L.i("done"), error: (p0) => L.i("error"));
     registerNetworkCall(cUpdate, updateInt);
     registerNetworkCall(cParse, parseInt);
     registerNetworkCall(cNet0, callNet0);
@@ -83,7 +109,10 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     unregisterNetworkProp(sString);
     unregisterNetworkProp(sMap);
     unregisterNetworkProp(sNet);
+    unregisterNetworkProp(sAcc);
     unregisterNetworkTrigger(tInt);
+    unregisterNetworkTrigger(tNet);
+    unregisterNetworkTrigger(tAcc);
     unregisterNetworkCall(cUpdate);
     unregisterNetworkCall(cParse);
     unregisterNetworkCall(cNet0);
@@ -312,35 +341,43 @@ void main() {
     NetworkManager.global.isClient = false;
     m.session.user = "u123";
     var nc = TestNetworkComponent();
-    late Completer c;
-    Map<String, dynamic> triggers = {};
+    var sc = StreamController();
+    var waiter = StreamIterator(sc.stream);
+    Map<String, List<dynamic>> triggers = {};
     nc.tInt.listen((event) {
-      c.complete();
+      sc.sink.add(1);
+    }, onError: (e) {});
+    nc.tNet.listen((event) {
+      sc.sink.add(1);
     }, onError: (e) {});
 
-    c = Completer();
     nc.tInt.add(1);
-    await c.future;
+    await waiter.moveNext();
     assert(nc.tInt.updated);
+    nc.tNet.add(TestNetworkValue());
+    await waiter.moveNext();
+    assert(nc.tNet.updated);
+    triggers = nc.sendNetworkTrigger();
+    assert(triggers.isNotEmpty);
+    L.i("triggers is $triggers");
+    triggers = NetworkSyncDataComponent.encodeTrigger(triggers, m.session);
+    L.i("triggers is $triggers");
+
+    nc.recvNetworkTrigger(triggers);
+    await waiter.moveNext();
+    await waiter.moveNext();
     triggers = nc.sendNetworkTrigger();
     assert(triggers.isNotEmpty);
     L.i("triggers is $triggers");
 
-    c = Completer();
-    nc.recvNetworkTrigger(triggers);
-    await c.future;
-    triggers = nc.sendNetworkTrigger();
-    assert(triggers.isNotEmpty);
-
-    c = Completer();
     nc.tInt.addStream(Stream.value(1));
-    await c.future;
+    await waiter.moveNext();
     triggers = nc.sendNetworkTrigger();
     assert(triggers.isNotEmpty);
 
     nc.tInt.addError("error");
     nc.recvNetworkTrigger({
-      "none": [1]
+      "none": ["1"]
     });
 
     try {
@@ -401,9 +438,12 @@ void main() {
     assert(nc1.nUpdated);
     var cs1 = NetworkComponent.syncSend("*");
     assert(cs1.length == 1);
+    assert(cs1.map((e) => e.encode(cb.session)).toList().length == 1);
     var cs2 = NetworkComponent.syncSend("*");
     assert(cs2.isEmpty);
-    cs1[0].nTriggers = {"int": "[1]"};
+    cs1[0].nTriggers = {
+      "int": ["1"]
+    };
     NetworkComponent.syncRecv("*", cs1);
 
     cb.sync("*");
@@ -411,6 +451,18 @@ void main() {
     NetworkComponent.syncRecv("*", [], whole: true);
     assert(NetworkComponent.findComponent(nc1.cid) == null);
 
+    nc1.unregister();
+  });
+  test('NetworkComponent.access', () async {
+    var cb = TestNetworkManager();
+    var nc1 = TestNetworkComponent();
+    assert(nc1.nUpdated);
+    var cs1 = NetworkComponent.syncSend("*");
+    assert(cs1.length == 1);
+    cs1 = cs1.map((e) => e.encode(cb.session)).toList();
+    L.i("cs1 is ${cs1[0].nProps}");
+    assert(cs1[0].nProps?["sAcc"] == null);
+    assert(cs1[0].nTriggers?["tAcc"] == null);
     nc1.unregister();
   });
   test('NetworkComponent.remove', () async {

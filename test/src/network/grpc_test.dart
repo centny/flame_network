@@ -129,19 +129,14 @@ void main() {
     await NetworkManagerGRPC.shared.start();
     var connected = await callback.waitConn();
     L.i("conn is $connected");
-    NetworkManagerGRPC.shared.networkSync(NetworkSyncData.create(components: [
-      NetworkSyncDataComponent(
-        nFactory: "type",
-        nCID: "uuid",
-        nRemoved: false,
-      )
-    ]));
+    nc.sInt.value = 1;
+    NetworkManager.global.sync("*");
     var received = await callback.waitData();
     L.i("data is $received");
     nc.unregister();
     await NetworkManagerGRPC.shared.stop();
   });
-  test('NetworkGRPC.sync', () async {
+  test('NetworkGRPC.tls', () async {
     var callback = TestNetworkCallback();
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = false;

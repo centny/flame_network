@@ -116,9 +116,52 @@ class NetworkSyncDataComponent {
   String? nOwner;
   bool? nRemoved;
   Map<String, dynamic>? nProps = {};
-  Map<String, dynamic>? nTriggers = {};
+  Map<String, List<dynamic>>? nTriggers = {};
 
   NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nOwner, this.nRemoved, this.nProps, this.nTriggers});
+
+  static Map<String, dynamic> encodeProp(Map<String, dynamic>? props, NetworkSession session) {
+    Map<String, dynamic> propAll = {};
+    props?.forEach((key, value) {
+      if (value is NetworkValue) {
+        if (value.access(session)) {
+          propAll[key] = value.encode();
+        }
+      } else {
+        propAll[key] = value;
+      }
+    });
+    return propAll;
+  }
+
+  static Map<String, List<dynamic>> encodeTrigger(Map<String, List<dynamic>>? triggers, NetworkSession session) {
+    Map<String, List<dynamic>> triggerAll = {};
+    triggers?.forEach((key, value) {
+      var vals = [];
+      for (var e in value) {
+        if (e is NetworkValue) {
+          if (e.access(session)) {
+            vals.add(e.encode());
+          }
+        } else {
+          vals.add(e);
+        }
+      }
+      if (vals.isNotEmpty) {
+        triggerAll[key] = vals;
+      }
+    });
+    return triggerAll;
+  }
+
+  NetworkSyncDataComponent encode(NetworkSession session) => NetworkSyncDataComponent(
+        nFactory: nFactory,
+        nCID: nCID,
+        nOwner: nOwner,
+        nRemoved: nRemoved,
+        nProps: encodeProp(nProps, session),
+        nTriggers: encodeTrigger(nTriggers, session),
+      );
 }
 
 class NetworkSyncData {
@@ -252,6 +295,7 @@ class NetworkCallResult {
 mixin NetworkValue {
   dynamic encode();
   void decode(dynamic v);
+  bool access(NetworkSession s) => true;
 }
 
 typedef NetworkCallFunction<R, S> = Future<R> Function(NetworkSession ctx, String uuid, S);
@@ -275,16 +319,9 @@ class NetworkCall<R, S> {
     return (retNew?.call()?..decode(r.nResult)) ?? decode(r.nResult);
   }
 
-  dynamic decode(String v) {
-    return jsonDecode(v);
-  }
+  dynamic decode(String v) => jsonDecode(v);
 
-  String encode(dynamic v) {
-    if (v is NetworkValue) {
-      return v.encode();
-    }
-    return jsonEncode(v);
-  }
+  String encode(dynamic v) => v is NetworkValue ? v.encode() : jsonEncode(v);
 }
 
 class NetworkProp<T> {
@@ -326,19 +363,9 @@ class NetworkProp<T> {
 
   void syncRecv(dynamic v) => decode(v);
 
-  dynamic encode() {
-    if (value is NetworkValue) {
-      return (value as NetworkValue).encode();
-    }
-    return jsonEncode(value);
-  }
+  dynamic encode() => value is NetworkValue ? value : jsonEncode(value);
 
-  void decode(dynamic v) {
-    if (value is NetworkValue) {
-      return (value as NetworkValue).decode(v);
-    }
-    value = jsonDecode(v);
-  }
+  void decode(dynamic v) => value is NetworkValue ? (value as NetworkValue).decode(v) : value = jsonDecode(v);
 }
 
 class NetworkTrigger<T> with Stream<T> implements StreamSink<T> {
@@ -352,12 +379,13 @@ class NetworkTrigger<T> with Stream<T> implements StreamSink<T> {
   List<T> get value => _value;
   String name;
 
+  NetworkValue Function()? valNew;
   void Function(T)? onRecv;
   void Function()? onDone;
   void Function(dynamic)? onError;
   void Function(T v)? onUpdate;
 
-  NetworkTrigger(this.name) {
+  NetworkTrigger(this.name, {this.valNew}) {
     _stream.onListen = () => _listen = true;
     _stream.onCancel = () => _listen = false;
     _sink.stream.listen(_onData, onDone: _onDone, onError: _onError);
@@ -417,7 +445,7 @@ class NetworkTrigger<T> with Stream<T> implements StreamSink<T> {
     return _stream.stream.listen(onData, onDone: onDone, onError: onError, cancelOnError: cancelOnError);
   }
 
-  dynamic syncSend() {
+  List<dynamic> syncSend() {
     _updated = false;
     var v = encode(value);
     _value.clear();
@@ -430,13 +458,9 @@ class NetworkTrigger<T> with Stream<T> implements StreamSink<T> {
     }
   }
 
-  dynamic encode(List<T> v) {
-    return jsonEncode(v);
-  }
+  List<dynamic> encode(List<T> v) => v.map((e) => e is NetworkValue ? e : jsonEncode(e)).toList();
 
-  List<T> decode(dynamic v) {
-    return (jsonDecode(v) as List<dynamic>).map((e) => e as T).toList();
-  }
+  List<T> decode(List<dynamic> v) => v.map((e) => valNew != null ? (valNew!()..decode(e)) as T : jsonDecode(e) as T).toList();
 }
 
 typedef NetworkComponentFactory = NetworkComponent Function(String key, String group, String cid);
@@ -619,11 +643,11 @@ mixin NetworkComponent {
     _removeComponentCheck();
   }
 
-  Map<String, dynamic> sendNetworkTrigger() {
+  Map<String, List<dynamic>> sendNetworkTrigger() {
     if (!_triggerUpdated) {
       return {};
     }
-    Map<String, dynamic> updated = {};
+    Map<String, List<dynamic>> updated = {};
     for (var trigger in _triggers.values) {
       if (trigger.updated) {
         updated[trigger.name] = trigger.syncSend();

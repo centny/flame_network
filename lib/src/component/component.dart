@@ -99,6 +99,22 @@ class NetworkPropList<T> extends NetworkProp<List<T>> {
   void decode(v) => value = (jsonDecode(v) as List<dynamic>).map((e) => e as T).toList();
 }
 
+class NetworkAccessValue<T> with NetworkValue {
+  T value;
+  final bool Function(NetworkSession s) _access;
+
+  NetworkAccessValue(this.value, this._access);
+
+  @override
+  void decode(v) => value = jsonDecode(v);
+
+  @override
+  dynamic encode() => jsonEncode(value);
+
+  @override
+  bool access(NetworkSession s) => _access(s);
+}
+
 class GameLoop {
   GameLoop(this.callback);
 
