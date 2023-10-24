@@ -781,7 +781,11 @@ func (n *NetworkTransportGRPC) createListener(host string) (ln net.Listener, err
 
 func (n *NetworkTransportGRPC) Start() (err error) {
 	if !n.initial {
-		n.WebMux.Handle(n.WebAddress.Path, n.Websocket)
+		path := n.WebAddress.Path
+		if len(path) < 1 {
+			path = "/"
+		}
+		n.WebMux.Handle(path, n.Websocket)
 		n.initial = true
 	}
 	if Network.IsServer {
