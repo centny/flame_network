@@ -452,7 +452,7 @@ class NetworkTrigger<T> with Stream<T> implements StreamSink<T> {
     return v;
   }
 
-  void syncRecv(dynamic v) {
+  void syncRecv(List<dynamic> v) {
     for (var val in decode(v)) {
       add(val);
     }
