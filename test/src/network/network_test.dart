@@ -171,6 +171,15 @@ class TestNetworkErr with NetworkComponent, NetworkEvent {
 
 class TestNetworkConnection with NetworkConnection {
   bool syncError = false;
+
+  TestNetworkConnection();
+
+  @override
+  NetworkSession get session => NetworkManager.global.session;
+
+  @override
+  NetworkState get state => NetworkState.ready;
+
   @override
   bool get isClient => true;
 
@@ -190,7 +199,6 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
 
   TestNetworkManager() {
     standalone = true;
-    conn.session = session;
   }
 
   @override
@@ -206,16 +214,18 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
 
 void main() {
   test('NetworkSession', () async {
-    var session0 = NetworkSession.from({});
-    session0.session = "123";
+    var session0 = DefaultNetworkSession.meta({});
+    session0.key = "123";
     session0.group = "123";
-    var session1 = NetworkSession.session("123");
-    assert(session0.session == "123");
+    var session1 = DefaultNetworkSession.session("123");
+    assert(session0.key == "123");
     assert(session0.group == "123");
-    assert(session1.session == "123");
+    assert(session1.key == "123");
     assert(session0.hashCode == session1.hashCode);
     assert(session0 == session1);
     assert(session0.toString() != session1.toString());
+    session0.context["abc"] = "123";
+    assert(session0.context.isNotEmpty);
   });
   test('NetworkManager.create', () async {
     try {
@@ -279,11 +289,11 @@ void main() {
 
     //cover
     try {
-      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: "none", nName: nc.cUpdate.name, nArg: "100"));
+      await NetworkComponent.callNetworkCall(DefaultNetworkSession.create(), NetworkCallArg(uuid: const Uuid().v1(), nCID: "none", nName: nc.cUpdate.name, nArg: "100"));
       assert(false); //not reach
     } catch (_) {}
     try {
-      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: nc.nCID, nName: "none", nArg: "100"));
+      await NetworkComponent.callNetworkCall(DefaultNetworkSession.create(), NetworkCallArg(uuid: const Uuid().v1(), nCID: nc.nCID, nName: "none", nArg: "100"));
       assert(false); //not reach
     } catch (_) {}
 
@@ -292,7 +302,7 @@ void main() {
     //
     var ne = TestNetworkErr();
     try {
-      await NetworkComponent.callNetworkCall(null, NetworkCallArg(uuid: const Uuid().v1(), nCID: ne.nCID, nName: "err", nArg: "100"));
+      await NetworkComponent.callNetworkCall(DefaultNetworkSession.create(), NetworkCallArg(uuid: const Uuid().v1(), nCID: ne.nCID, nName: "err", nArg: "100"));
       assert(false);
     } catch (_) {}
     ne.unregister();

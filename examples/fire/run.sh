@@ -4,5 +4,6 @@ if [ "$1" == "go" ];then
     go build -v .
     ./fire
 else
-    MODE=server flutter test lib/main.dart
+    ./build-dart.sh
+    ./build/server/fire.sh
 fi

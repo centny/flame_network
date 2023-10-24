@@ -126,7 +126,7 @@ func (g *FireGame) releaseSeat(seat int) {
 	g.seatUsed[seat] = false
 }
 
-func (g *FireGame) onPlayerJoin(ctx *network.NetworkSession, _ string, name string) (result string, err error) {
+func (g *FireGame) onPlayerJoin(ctx network.NetworkSession, _ string, name string) (result string, err error) {
 	owner := ctx.User()
 	if len(owner) < 1 || len(name) < 1 {
 		err = fmt.Errorf("user/name is required")
@@ -444,17 +444,17 @@ func (p *Player) OnReward(v float64) {
 	network.Infof("Game(%v) reward %v", p.Group, v)
 }
 
-func (p *Player) OnSwitchWeapon(ctx *network.NetworkSession, uuid string) (err error) {
+func (p *Player) OnSwitchWeapon(ctx network.NetworkSession, uuid string) (err error) {
 	p.SetWeaponUsing((p.WeaponUsing + 1) % len(p.Game.weaponColors))
 	return
 }
 
-func (p *Player) OnTurnTo(ctx *network.NetworkSession, uuid string, arg Vec) (err error) {
+func (p *Player) OnTurnTo(ctx network.NetworkSession, uuid string, arg Vec) (err error) {
 	p.turnTo(arg)
 	return
 }
 
-func (p *Player) OnFireTo(ctx *network.NetworkSession, uuid string, arg Vec) (err error) {
+func (p *Player) OnFireTo(ctx network.NetworkSession, uuid string, arg Vec) (err error) {
 	p.fireTo(arg)
 	return
 }

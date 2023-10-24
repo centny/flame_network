@@ -17,7 +17,7 @@ String environment(String key) {
 
 void main() async {
   var mode = environment("MODE");
-  if (mode == "server") {
+  if (mode == "service") {
     var grpcAddr = environment("GRPC_ADDR");
     if (grpcAddr.isEmpty) {
       grpcAddr = "grpc://0.0.0.0:50051";
@@ -42,11 +42,16 @@ void main() async {
     loop.start();
     await NetworkManagerGRPC.shared.start();
     await ProcessSignal.sigint.watch().first;
+    L.i("server is stopping");
     loop.stop();
     await NetworkManagerGRPC.shared.stop();
     return;
   }
   switch (mode) {
+    case "server":
+      NetworkManagerGRPC.shared.isClient = false;
+      NetworkManagerGRPC.shared.isServer = true;
+      break;
     case "client":
       NetworkManagerGRPC.shared.isClient = true;
       NetworkManagerGRPC.shared.isServer = false;

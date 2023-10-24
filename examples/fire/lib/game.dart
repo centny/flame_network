@@ -97,11 +97,11 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     seatUsed[seat] = false;
   }
 
-  Future<String> onPlayerJoin(NetworkSession? ctx, String uuid, String name) async {
-    if ((ctx?.user ?? "").isEmpty || name.isEmpty) {
+  Future<String> onPlayerJoin(NetworkSession ctx, String uuid, String name) async {
+    if ((ctx.user ?? "").isEmpty || name.isEmpty) {
       return "user/name is required";
     }
-    var owner = ctx!.user;
+    var owner = ctx.user ?? "";
     if (players.containsKey(owner)) {
       return "OK";
     }

@@ -99,17 +99,33 @@ extension on NetworkCallResult {
   }
 }
 
-class NetworkServerConnGRPC with NetworkConnection {
+class NetworkServerConnGRPC with NetworkConnection, NetworkSession {
+  NetworkState mState = NetworkState.none;
+  Map<String, String> mContext = {};
+  Map<String, String> mMeta = {};
+
+  @override
+  Map<String, String> get context => mContext;
+
+  @override
+  Map<String, String> get meta => mMeta;
+
+  @override
+  NetworkSession get session => this;
+
+  @override
+  NetworkState get state => mState;
+
   @override
   bool get isClient => false;
 
   @override
   bool get isServer => true;
 
-  NetworkServerConnGRPC({NetworkSession? session, NetworkState? state}) {
-    this.session = session;
-    this.state = state;
-  }
+  NetworkServerConnGRPC({NetworkState? state, Map<String, String>? context, Map<String, String>? meta})
+      : mState = state ?? NetworkState.none,
+        mContext = context ?? {},
+        mMeta = meta ?? {};
 }
 
 class _NetworkSyncStream extends NetworkServerConnGRPC {
@@ -117,7 +133,7 @@ class _NetworkSyncStream extends NetworkServerConnGRPC {
 
   Stream<SyncData> get stream => controller.stream;
 
-  _NetworkSyncStream({super.session, super.state});
+  _NetworkSyncStream({super.state, super.context, super.meta});
 
   void add(SyncData data) {
     controller.sink.add(data);
@@ -144,13 +160,17 @@ class NetworkServerGRPC extends ServerServiceBase {
   NetworkServerGRPC(this.callback);
 
   NetworkConnection _keepSession(NetworkSession session) {
-    var having = _sessionAll[session.session];
+    var having = _sessionAll[session.key];
     if (having == null) {
-      having = NetworkServerConnGRPC(session: session);
-      _sessionAll[session.session] = having;
+      having = NetworkServerConnGRPC(state: NetworkState.ready, meta: session.meta);
+      _sessionAll[session.key] = having;
     }
-    having.session?.last = DateTime.now();
+    having.session.last = DateTime.now();
     return having;
+  }
+
+  NetworkConnection _keepSessionByMeta(Map<String, String>? meta) {
+    return _keepSession(DefaultNetworkSession.meta(meta ?? {}));
   }
 
   HashSet<_NetworkSyncStream> _sessionConnAll(String session) {
@@ -172,22 +192,22 @@ class NetworkServerGRPC extends ServerServiceBase {
   }
 
   void _networkState(NetworkServerConnGRPC conn, NetworkState state, {Object? info}) {
-    callback.onNetworkState(_sessionConnAll(conn.session?.session ?? ""), conn, state, info: info);
+    callback.onNetworkState(_sessionConnAll(conn.session.key), conn, state, info: info);
   }
 
   void _addStream(_NetworkSyncStream conn) {
-    _sessionConnAll(conn.session?.session ?? "").add(conn);
-    _sessionConnGroup(conn.session?.group ?? "").add(conn);
+    _sessionConnAll(conn.session.key).add(conn);
+    _sessionConnGroup(conn.session.group ?? "").add(conn);
     _sessionConnGroup("*").add(conn);
-    L.d("[GRPC] add one network sync stream on ${conn.session?.group}/${conn.session?.user}/${conn.session?.session}");
+    L.d("[GRPC] add one network sync stream on ${conn.session.group}/${conn.session.user}/${conn.session.key}");
     _networkState(conn, NetworkState.ready);
   }
 
   void _cancleStream(_NetworkSyncStream conn) {
-    _sessionConnAll(conn.session?.session ?? "").remove(conn);
-    _sessionConnGroup(conn.session?.group ?? "").remove(conn);
+    _sessionConnAll(conn.session.key).remove(conn);
+    _sessionConnGroup(conn.session.group ?? "").remove(conn);
     _sessionConnGroup("*").remove(conn);
-    L.d("[GRPC] remove network sync stream on ${conn.session?.group}/${conn.session?.user}/${conn.session?.session}");
+    L.d("[GRPC] remove network sync stream on ${conn.session.group}/${conn.session.user}/${conn.session.key}");
     _networkState(conn, NetworkState.closed);
   }
 
@@ -200,7 +220,7 @@ class NetworkServerGRPC extends ServerServiceBase {
   void networkSync(NetworkSyncData data) {
     var components = data.components.map((e) => e.wrap());
     for (var conn in _sessionConnGroup(data.group)) {
-      var syncData = SyncData(id: newRequestID(), group: conn.session?.group ?? data.group, whole: data.whole, components: components);
+      var syncData = SyncData(id: newRequestID(), group: conn.session.group ?? data.group, whole: data.whole, components: components);
       conn.add(syncData);
     }
   }
@@ -209,7 +229,7 @@ class NetworkServerGRPC extends ServerServiceBase {
     List<String> keys = [];
     var now = DateTime.now();
     _sessionAll.forEach((k, v) {
-      if (now.difference(v.session?.last ?? DateTime.fromMillisecondsSinceEpoch(0)) >= max * 2) {
+      if (now.difference(v.session.last) >= max * 2) {
         keys.add(k);
       }
     });
@@ -224,33 +244,22 @@ class NetworkServerGRPC extends ServerServiceBase {
 
   @override
   Future<PingResult> remotePing(ServiceCall call, PingArg request) async {
-    var session = NetworkSession.from(call.clientMetadata ?? {});
-    _keepSession(session);
+    _keepSessionByMeta(call.clientMetadata);
     return PingResult(id: request.id, serverTime: Int64(DateTime.now().millisecondsSinceEpoch));
   }
 
   @override
   Stream<SyncData> remoteSync(ServiceCall call, SyncArg request) {
-    var session = NetworkSession.from(call.clientMetadata ?? {});
-    var syncStream = _NetworkSyncStream(session: session, state: NetworkState.ready);
+    var conn = _keepSessionByMeta(call.clientMetadata);
+    var syncStream = _NetworkSyncStream(state: NetworkState.ready, context: conn.session.context, meta: conn.session.meta);
     syncStream.controller.onCancel = () => _cancleStream(syncStream);
     _addStream(syncStream);
-    _keepSession(session);
     return syncStream.stream;
   }
 
-  // @override
-  // Stream<SyncData> remoteSync(ServiceCall call, SyncArg request) async* {
-  //   while (true) {
-  //     await Future.delayed(const Duration(milliseconds: 100));
-  //     yield SyncData();
-  //   }
-  // }
-
   @override
   Future<CallResult> remoteCall(ServiceCall call, CallArg request) async {
-    var session = NetworkSession.from(call.clientMetadata ?? {});
-    var conn = _keepSession(session);
+    var conn = _keepSessionByMeta(call.clientMetadata);
     var arg = request.wrap();
     try {
       var result = await callback.onNetworkCall(conn, arg);
@@ -263,12 +272,19 @@ class NetworkServerGRPC extends ServerServiceBase {
 }
 
 class NetworkClientGRPC extends ServerClient with NetworkConnection {
-  ClientChannelBase channel;
-  NetworkCallback callback;
-  Duration timeout = const Duration(seconds: 10);
-  ResponseStream<SyncData>? _syncMonitor;
+  ClientChannelBase mChannel;
+  NetworkCallback mCallback;
+  Duration mTimeout = const Duration(seconds: 10);
+  ResponseStream<SyncData>? mMonitor;
+  NetworkState mState = NetworkState.none;
 
-  CallOptions get callOptions => CallOptions(metadata: session?.value, timeout: timeout);
+  CallOptions get callOptions => CallOptions(metadata: session.meta, timeout: mTimeout);
+
+  @override
+  NetworkSession get session => NetworkManager.global.session;
+
+  @override
+  NetworkState get state => mState;
 
   @override
   bool get isClient => true;
@@ -276,45 +292,45 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
   @override
   bool get isServer => false;
 
-  NetworkClientGRPC(this.channel, this.callback) : super(channel) {
-    channel.onConnectionStateChanged.listen(onConnectionStateChanged);
+  NetworkClientGRPC(this.mChannel, this.mCallback) : super(mChannel) {
+    mChannel.onConnectionStateChanged.listen(onConnectionStateChanged);
   }
 
   void onConnectionStateChanged(ConnectionState state) {
     switch (state) {
       case ConnectionState.connecting:
         L.i("[GRPC] client connection is connecting");
-        this.state = NetworkState.connecting;
-        callback.onNetworkState(HashSet.from([this]), this, NetworkState.connecting);
+        mState = NetworkState.connecting;
+        mCallback.onNetworkState(HashSet.from([this]), this, NetworkState.connecting);
         break;
       case ConnectionState.ready:
         L.i("[GRPC] client connection is ready");
-        this.state = NetworkState.ready;
-        callback.onNetworkState(HashSet.from([this]), this, NetworkState.ready);
+        mState = NetworkState.ready;
+        mCallback.onNetworkState(HashSet.from([this]), this, NetworkState.ready);
         break;
       case ConnectionState.transientFailure:
         L.i("[GRPC] client connection is reconnecting");
-        this.state = NetworkState.connecting;
-        callback.onNetworkState(HashSet.from([this]), this, NetworkState.connecting);
+        mState = NetworkState.connecting;
+        mCallback.onNetworkState(HashSet.from([this]), this, NetworkState.connecting);
         break;
       case ConnectionState.idle:
         break;
       case ConnectionState.shutdown:
         L.i("[GRPC] client connection is closed");
-        this.state = NetworkState.closed;
-        callback.onNetworkState(HashSet.from([this]), this, NetworkState.closed);
+        mState = NetworkState.closed;
+        mCallback.onNetworkState(HashSet.from([this]), this, NetworkState.closed);
         break;
     }
   }
 
   Future<DateTime> ping(Duration timeout) async {
-    var result = await super.remotePing(PingArg(id: newRequestID()), options: CallOptions(metadata: session?.value, timeout: timeout));
+    var result = await super.remotePing(PingArg(id: newRequestID()), options: CallOptions(metadata: session.meta, timeout: timeout));
     return DateTime.fromMillisecondsSinceEpoch(result.serverTime.toInt());
   }
 
   Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async {
     try {
-      await callback.onNetworkSync(conn, data);
+      await mCallback.onNetworkSync(conn, data);
     } catch (e, s) {
       L.e("[GRPC] network sync throw error $e\n$s");
     }
@@ -322,17 +338,17 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
 
   void startMonitorSync() async {
     var request = SyncArg(id: newRequestID());
-    _syncMonitor = super.remoteSync(request, options: CallOptions(metadata: session?.value));
-    _syncMonitor?.listen(
+    mMonitor = super.remoteSync(request, options: CallOptions(metadata: session.meta));
+    mMonitor?.listen(
       (data) => onNetworkSync(this, data.wrap()),
-      onError: (e) => callback.onNetworkState(HashSet.from([this]), this, NetworkState.error, info: e),
+      onError: (e) => mCallback.onNetworkState(HashSet.from([this]), this, NetworkState.error, info: e),
       cancelOnError: true,
     );
   }
 
   Future<void> stopMonitorSync() async {
-    await _syncMonitor?.cancel();
-    _syncMonitor = null;
+    await mMonitor?.cancel();
+    mMonitor = null;
   }
 
   Future<NetworkCallResult> networkCall(NetworkCallArg arg) async {
@@ -343,7 +359,7 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
     return result.wrap();
   }
 
-  Future<void> shutdown() => channel.shutdown();
+  Future<void> shutdown() => mChannel.shutdown();
 }
 
 class HandledServerConnectionGRPC implements ServerTransportConnection {
@@ -584,7 +600,6 @@ class NetworkManagerGRPC extends NetworkManager {
       throw Exception("not configured");
     }
     client = NetworkClientGRPC(channel!, callback);
-    client?.session = session;
     client?.startMonitorSync();
   }
 

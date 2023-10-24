@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flame/game.dart';
 import 'package:flame_network/flame_network.dart';
 import 'package:flame_network/src/common/log.dart';
@@ -56,5 +58,18 @@ void main() {
     var v = NetworkPropList<int>("abc", [1]);
     v.decode("[2]");
     assert(v.value[0] == 2);
+  });
+  test('GameLoop', () async {
+    var c = Completer();
+    var loop = GameLoop((dt) {
+      if (!c.isCompleted) {
+        c.complete();
+      }
+    });
+    loop.start();
+    await c.future;
+    loop.step(0);
+    loop.stop();
+    loop.dispose();
   });
 }

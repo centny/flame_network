@@ -66,14 +66,14 @@ func (n NetworkSessionValueGRPC) Exist(path ...string) bool {
 	return false
 }
 
-func NewNetworkSessionFromGRPC(ctx context.Context) (session *NetworkSession) {
+func NewNetworkSessionFromGRPC(ctx context.Context) (session NetworkSession) {
 	md, _ := metadata.FromIncomingContext(ctx)
-	session = NewNetworkSession(xmap.NewSafeByBase(NetworkSessionValueGRPC(md)))
+	session = NewDefaultNetworkSessionByMeta(xmap.NewSafeByBase(NetworkSessionValueGRPC(md)))
 	return
 }
 
-func NewOutgoingContext(parent context.Context, session *NetworkSession) (ctx context.Context) {
-	raw := session.Raw()
+func NewOutgoingContext(parent context.Context, session NetworkSession) (ctx context.Context) {
+	raw := session.Meta().Raw()
 	switch raw := raw.(type) {
 	case xmap.M:
 		value := map[string]string{}
@@ -82,7 +82,7 @@ func NewOutgoingContext(parent context.Context, session *NetworkSession) (ctx co
 		}
 		ctx = metadata.NewOutgoingContext(parent, metadata.New(value))
 	default:
-		ctx = metadata.NewOutgoingContext(parent, metadata.MD(session.Raw().(NetworkSessionValueGRPC)))
+		ctx = metadata.NewOutgoingContext(parent, metadata.MD(session.Meta().Raw().(NetworkSessionValueGRPC)))
 	}
 	return
 }
@@ -145,7 +145,7 @@ func ParseNetworkSyncDataGRPC(sd *grpc.SyncData) (data *NetworkSyncData) {
 }
 
 type NetworkBaseConnGRPC struct {
-	session  *NetworkSession
+	session  NetworkSession
 	state    NetworkState
 	isServer bool
 	isClient bool
@@ -154,7 +154,7 @@ type NetworkBaseConnGRPC struct {
 func (n *NetworkBaseConnGRPC) ID() string {
 	return fmt.Sprintf("%p", n)
 }
-func (n *NetworkBaseConnGRPC) Session() *NetworkSession {
+func (n *NetworkBaseConnGRPC) Session() NetworkSession {
 	return n.session
 }
 func (n *NetworkBaseConnGRPC) State() NetworkState {
@@ -175,16 +175,11 @@ type NetworkSyncStreamGRPC struct {
 	closer chan string
 }
 
-func NewNetworkSyncStreamGRPC(session *NetworkSession, stream grpc.Server_RemoteSyncServer) (sync *NetworkSyncStreamGRPC) {
+func NewNetworkSyncStreamGRPC(conn *NetworkBaseConnGRPC, stream grpc.Server_RemoteSyncServer) (sync *NetworkSyncStreamGRPC) {
 	sync = &NetworkSyncStreamGRPC{
-		NetworkBaseConnGRPC: &NetworkBaseConnGRPC{
-			session:  session,
-			state:    NetworkStateReady,
-			isServer: true,
-			isClient: true,
-		},
-		stream: stream,
-		closer: make(chan string, 1),
+		NetworkBaseConnGRPC: conn,
+		stream:              stream,
+		closer:              make(chan string, 1),
 	}
 	return
 }
@@ -234,22 +229,22 @@ func NewNetworkServerGRPC(callback NetworkCallback) (server *NetworkServerGRPC) 
 	return
 }
 
-func (n *NetworkServerGRPC) keepSession(session *NetworkSession) NetworkConnection {
+func (n *NetworkServerGRPC) keepSession(session NetworkSession) *NetworkBaseConnGRPC {
 	n.lock.Lock()
 	defer n.lock.Unlock()
-	sid := session.Session()
+	sid := session.Key()
 	having := n.sessionAll[sid]
 	if having == nil {
 		having = &NetworkBaseConnGRPC{
-			session:  session,
+			session:  NewDefaultNetworkSessionByMeta(session.Meta()),
 			state:    NetworkStateReady,
 			isServer: true,
 			isClient: true,
 		}
 		n.sessionAll[sid] = having
 	}
-	having.session.Last = time.Now()
-	having.session = session
+	having.session.SetLast(time.Now())
+	having.session.SetMeta(session.Meta()) //only update meta
 	return having
 }
 
@@ -258,7 +253,7 @@ func (n *NetworkServerGRPC) sessionTimeout(max time.Duration) []*NetworkBaseConn
 	defer n.lock.RUnlock()
 	sessionAll := []*NetworkBaseConnGRPC{}
 	for k, s := range n.sessionAll {
-		if time.Since(s.session.Last) > max {
+		if time.Since(s.session.Last()) > max {
 			sessionAll = append(sessionAll, s)
 			delete(n.sessionAll, k)
 		}
@@ -311,7 +306,7 @@ func (n *NetworkServerGRPC) addStream(stream *NetworkSyncStreamGRPC) {
 		n.networkState(stream, NetworkStateReady, nil)
 	}()
 	sid := stream.ID()
-	session := stream.session.Session()
+	session := stream.session.Key()
 	group := stream.session.Group()
 	n.sessionConnAll(session)[sid] = stream
 	n.groupConnAll(group)[sid] = stream
@@ -326,7 +321,7 @@ func (n *NetworkServerGRPC) cancleStream(stream *NetworkSyncStreamGRPC) {
 		n.networkState(stream, NetworkStateClosed, nil)
 	}()
 	sid := stream.ID()
-	session := stream.session.Session()
+	session := stream.session.Key()
 	group := stream.session.Group()
 	delete(n.sessionConnAll(session), sid)
 	delete(n.groupConnAll(group), sid)
@@ -335,12 +330,12 @@ func (n *NetworkServerGRPC) cancleStream(stream *NetworkSyncStreamGRPC) {
 }
 
 func (n *NetworkServerGRPC) networkState(conn NetworkConnection, state NetworkState, info interface{}) {
-	n.callback.OnNetworkState(n.sessionConnCopy(conn.Session().Session()), conn, state, info)
+	n.callback.OnNetworkState(n.sessionConnCopy(conn.Session().Key()), conn, state, info)
 }
 
 func (n *NetworkServerGRPC) timeout(max time.Duration) {
 	for _, s := range n.sessionTimeout(max) {
-		for _, c := range n.sessionConnCopy(s.session.Session()) {
+		for _, c := range n.sessionConnCopy(s.session.Key()) {
 			c.(*NetworkSyncStreamGRPC).Close()
 		}
 	}
@@ -401,11 +396,11 @@ func (n *NetworkServerGRPC) RemotePing(ctx context.Context, arg *grpc.PingArg) (
 
 func (n *NetworkServerGRPC) RemoteSync(arg *grpc.SyncArg, stream grpc.Server_RemoteSyncServer) (err error) {
 	session := NewNetworkSessionFromGRPC(stream.Context())
-	n.keepSession(session)
-	conn := NewNetworkSyncStreamGRPC(session, stream)
-	n.addStream(conn)
-	defer n.cancleStream(conn)
-	err = conn.Wait()
+	conn := n.keepSession(session)
+	sync := NewNetworkSyncStreamGRPC(conn, stream)
+	n.addStream(sync)
+	defer n.cancleStream(sync)
+	err = sync.Wait()
 	return
 }
 
@@ -671,8 +666,8 @@ func NewNetworkTransportGRPC() (transport *NetworkTransportGRPC) {
 		exiter:   make(chan int, 8),
 		waiter:   sync.WaitGroup{},
 	}
-	transport.GrpcAddress, _ = url.Parse("grpc://127.0.0.1:50051/")
-	transport.WebAddress, _ = url.Parse("ws://127.0.0.1:50052/")
+	transport.GrpcAddress, _ = url.Parse("grpc://127.0.0.1:50051")
+	transport.WebAddress, _ = url.Parse("ws://127.0.0.1:50052")
 	transport.Server = NewNetworkServerGRPC(Network)
 	transport.GrpcServer = ggrpc.NewServer()
 	transport.WebMux = http.NewServeMux()

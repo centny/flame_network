@@ -16,46 +16,83 @@ import (
 
 var ErrFactoryNotExist = fmt.Errorf("factory is not exist")
 
-type NetworkSession struct {
+type NetworkSession interface {
 	xmap.Valuable
-	Last time.Time
+	Key() string
+	SetKey(key string)
+	Group() string
+	SetGroup(group string)
+	User() string
+	SetUser(user string)
+	Meta() xmap.Valuable
+	SetMeta(meta xmap.Valuable)
+	Last() time.Time
+	SetLast(last time.Time)
 }
 
-func NewNetworkSession(value xmap.Valuable) (session *NetworkSession) {
-	session = &NetworkSession{
-		Valuable: value,
-		Last:     time.Now(),
+type DefaultNetworkSession struct {
+	xmap.Valuable
+	meta xmap.Valuable
+	last time.Time
+}
+
+func NewDefaultNetworkSession(context, meta xmap.Valuable) (session *DefaultNetworkSession) {
+	session = &DefaultNetworkSession{
+		Valuable: context,
+		meta:     meta,
+		last:     time.Now(),
 	}
 	return
 }
 
-func NewNetworkSessionBySafeM() (session *NetworkSession) {
-	session = NewNetworkSession(xmap.NewSafe())
+func NewDefaultNetworkSessionByMeta(meta xmap.Valuable) (session *DefaultNetworkSession) {
+	session = NewDefaultNetworkSession(xmap.NewSafe(), meta)
 	return
 }
 
-func (n *NetworkSession) Session() string {
-	return n.StrDef("", "session")
+func NewDefaultNetworkSessionBySafeM() (session *DefaultNetworkSession) {
+	session = NewDefaultNetworkSession(xmap.NewSafe(), xmap.NewSafe())
+	return
 }
 
-func (n *NetworkSession) SetSession(session string) {
-	n.SetValue("session", session)
+func (n *DefaultNetworkSession) Key() string {
+	return n.meta.StrDef("", "key")
 }
 
-func (n *NetworkSession) Group() string {
-	return n.StrDef("", "group")
+func (n *DefaultNetworkSession) SetKey(key string) {
+	n.meta.SetValue("key", key)
 }
 
-func (n *NetworkSession) SetGroup(group string) {
-	n.SetValue("group", group)
+func (n *DefaultNetworkSession) Group() string {
+	return n.meta.StrDef("", "group")
 }
 
-func (n *NetworkSession) User() string {
-	return n.StrDef("", "user")
+func (n *DefaultNetworkSession) SetGroup(group string) {
+	n.meta.SetValue("group", group)
 }
 
-func (n *NetworkSession) SetUser(user string) {
-	n.SetValue("user", user)
+func (n *DefaultNetworkSession) User() string {
+	return n.meta.StrDef("", "user")
+}
+
+func (n *DefaultNetworkSession) SetUser(user string) {
+	n.meta.SetValue("user", user)
+}
+
+func (n *DefaultNetworkSession) Meta() xmap.Valuable {
+	return n.meta
+}
+
+func (n *DefaultNetworkSession) SetMeta(meta xmap.Valuable) {
+	n.meta = meta
+}
+
+func (n *DefaultNetworkSession) Last() time.Time {
+	return n.last
+}
+
+func (n *DefaultNetworkSession) SetLast(last time.Time) {
+	n.last = last
 }
 
 type NetworkState int
@@ -70,7 +107,7 @@ const (
 
 type NetworkConnection interface {
 	ID() string
-	Session() *NetworkSession
+	Session() NetworkSession
 	State() NetworkState
 	IsServer() bool
 	IsClient() bool
@@ -130,7 +167,7 @@ func (n *NetworkSyncData) IsUpdated() bool {
 var Network = NewNetworkManager()
 
 type NetworkManager struct {
-	*NetworkSession
+	NetworkSession
 	MinSync   time.Duration
 	Keepalive time.Duration
 	Timeout   time.Duration
@@ -143,7 +180,7 @@ type NetworkManager struct {
 
 func NewNetworkManager() (network *NetworkManager) {
 	network = &NetworkManager{
-		NetworkSession: NewNetworkSessionBySafeM(),
+		NetworkSession: NewDefaultNetworkSessionBySafeM(),
 		MinSync:        30 * time.Millisecond,
 		Keepalive:      3 * time.Second,
 		Timeout:        5 * time.Second,
@@ -631,7 +668,7 @@ func (n *NetworkComponent) NetworkCall(name string, arg interface{}, ret interfa
 	return
 }
 
-func (n *NetworkComponent) CallNetworkCall(ctx *NetworkSession, arg *NetworkCallArg) (ret *NetworkCallResult, err error) {
+func (n *NetworkComponent) CallNetworkCall(ctx NetworkSession, arg *NetworkCallArg) (ret *NetworkCallResult, err error) {
 	defer func() {
 		if perr := recover(); perr != nil {
 			Errorf("NetworkComponent(%v/%v) call NetworkCall %v panic with\nArg:%v\nStack:\n%v\n%v", n.Factory, n.CID, arg.Name, converter.JSON(arg), perr, xdebug.CallStack())

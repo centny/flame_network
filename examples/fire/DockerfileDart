@@ -13,5 +13,5 @@ COPY --from=0 /sdk/bin/cache/artifacts/engine/linux-x64/ /app/
 COPY --from=0 /src/examples/fire/build/flutter_assets /app/assets
 COPY --from=0 /src/examples/fire/build/fire.dill /app/fire.dill
 WORKDIR /app
-ENV MODE=server
+ENV MODE=service
 ENTRYPOINT ["/app/flutter_tester","--disable-vm-service","--flutter-assets-dir=assets","fire.dill"]

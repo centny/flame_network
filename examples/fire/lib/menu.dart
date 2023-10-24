@@ -49,7 +49,7 @@ class LoginMenuState extends State<LoginMenu> {
         if (username.text.isEmpty) {
           return;
         }
-        NetworkManagerGRPC.shared.session.session = const Uuid().v1();
+        NetworkManagerGRPC.shared.session.key = const Uuid().v1();
         NetworkManagerGRPC.shared.session.group = widget.game.nGroup;
         NetworkManagerGRPC.shared.session.user = username.text;
       }

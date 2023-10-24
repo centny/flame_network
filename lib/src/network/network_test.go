@@ -62,13 +62,13 @@ func (t *TestNetworkComponent) onTrigger1(n string, v string) {
 	fmt.Printf("on trigger %v=>%v\n", n, v)
 }
 
-func (t *TestNetworkComponent) onCall0(ctx *NetworkSession, uuid string) (ret string, err error) {
+func (t *TestNetworkComponent) onCall0(ctx NetworkSession, uuid string) (ret string, err error) {
 	ret = "test"
 	fmt.Printf("onCall0 =>%v,%v\n", ret, err)
 	return
 }
 
-func (t *TestNetworkComponent) onCall1(ctx *NetworkSession, uuid string, arg string) (err error) {
+func (t *TestNetworkComponent) onCall1(ctx NetworkSession, uuid string, arg string) (err error) {
 	if arg != "test" {
 		err = fmt.Errorf("not test")
 	}
@@ -76,24 +76,24 @@ func (t *TestNetworkComponent) onCall1(ctx *NetworkSession, uuid string, arg str
 	return
 }
 
-func (t *TestNetworkComponent) onCall2(ctx *NetworkSession, uuid string, arg string) (ret string, err error) {
+func (t *TestNetworkComponent) onCall2(ctx NetworkSession, uuid string, arg string) (ret string, err error) {
 	ret = arg
 	fmt.Printf("onCall3 %v=>%v,%v\n", arg, ret, err)
 	return
 }
 
-func (t *TestNetworkComponent) onCall3(ctx *NetworkSession, uuid string, arg *TestNetworkCallArg) (ret *TestNetworkCallRet, err error) {
+func (t *TestNetworkComponent) onCall3(ctx NetworkSession, uuid string, arg *TestNetworkCallArg) (ret *TestNetworkCallRet, err error) {
 	ret = &TestNetworkCallRet{Value: arg.Value}
 	fmt.Printf("onCall3 %v=>%v,%v\n", arg, ret, err)
 	return
 }
 
-func (t *TestNetworkComponent) onErr0(ctx *NetworkSession, uuid string) (err error) {
+func (t *TestNetworkComponent) onErr0(ctx NetworkSession, uuid string) (err error) {
 	err = fmt.Errorf("error")
 	return
 }
 
-func (t *TestNetworkComponent) onErr1(ctx *NetworkSession, uuid string, v func()) (err error) {
+func (t *TestNetworkComponent) onErr1(ctx NetworkSession, uuid string, v func()) (err error) {
 	err = fmt.Errorf("error")
 	return
 }
@@ -115,7 +115,7 @@ func (t *TestNetworkComponent) Unregister() {
 }
 
 type TestNetworkConnection struct {
-	session *NetworkSession
+	session NetworkSession
 	state   NetworkState
 	server  bool
 	client  bool
@@ -124,7 +124,7 @@ type TestNetworkConnection struct {
 func (t *TestNetworkConnection) ID() string {
 	return "c0"
 }
-func (t *TestNetworkConnection) Session() *NetworkSession {
+func (t *TestNetworkConnection) Session() NetworkSession {
 	return t.session
 }
 func (t *TestNetworkConnection) State() NetworkState {
@@ -186,11 +186,11 @@ func TestNetwork(t *testing.T) {
 	ComponentHub.OnRemove = func(c *NetworkComponent) {}
 	defer Network.Stop()
 	if tester.Run() {
-		session := NewNetworkSessionBySafeM()
-		session.SetSession("123")
+		session := NewDefaultNetworkSessionBySafeM()
+		session.SetKey("123")
 		session.SetUser("u1")
 		session.SetGroup("g1")
-		if session.Session() != "123" || session.User() != "u1" || session.Group() != "g1" {
+		if session.Key() != "123" || session.User() != "u1" || session.Group() != "g1" {
 			t.Error("error")
 			return
 		}

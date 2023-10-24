@@ -91,7 +91,15 @@ class TestNetworkCallback with NetworkCallback {
   }
 }
 
-class TestNetworkConnection with NetworkConnection {
+class TestNetworkConnection extends DefaultNetworkSession with NetworkConnection {
+  TestNetworkConnection() : super({}, {});
+
+  @override
+  NetworkSession get session => this;
+
+  @override
+  NetworkState get state => NetworkState.ready;
+
   @override
   bool get isClient => true;
 
@@ -257,6 +265,7 @@ void main() {
     } catch (_) {}
 
     var client = NetworkManagerGRPC.shared.client;
+    assert(client?.state == NetworkState.ready);
     var connections = NetworkManagerGRPC.shared.server?.connections ?? [];
     await NetworkManagerGRPC.shared.stop();
     //test for cover
@@ -286,5 +295,8 @@ void main() {
 
     var sink = CastStreamSinkGRPC(StreamController().sink);
     sink.addError("error");
+
+    var sc = NetworkServerConnGRPC();
+    assert(sc.state == NetworkState.none);
   });
 }

@@ -27,9 +27,9 @@ else
     esac
 
     cat > build/server/fire.sh <<EOF
-dir=`dirname \${0}`
+dir=\$(dirname \${0})
 cd \$dir
-export MODE=server
+export MODE=service
 ./flutter_tester --disable-vm-service --flutter-assets-dir=assets fire.dill
 EOF
     chmod +x build/server/fire.sh

@@ -7,49 +7,63 @@ import 'package:uuid/uuid.dart';
 
 import '../common/log.dart';
 
-class NetworkSession {
-  Map<String, String> value;
+mixin NetworkSession {
+  Map<String, String> get meta;
+
+  Map<String, String> get context;
 
   DateTime last = DateTime.now();
 
-  String get session => value["session"] ?? "";
-  set session(String v) => value["session"] = v;
+  String get key => meta["key"] ?? "";
+  set key(String v) => meta["key"] = v;
 
-  String get group => value["group"] ?? "";
-  set group(String v) => value["group"] = v;
+  String? get group => meta["group"];
+  set group(String? v) => meta["group"] = v!;
 
-  String get user => value["user"] ?? "";
-  set user(String v) => value["user"] = v;
-
-  NetworkSession(this.value);
-
-  factory NetworkSession.create() => NetworkSession({});
-
-  factory NetworkSession.from(Map<String, String> value) => NetworkSession(value);
-
-  factory NetworkSession.session(String session) => NetworkSession({"session": session});
+  String? get user => meta["user"];
+  set user(String? v) => meta["user"] = v!;
 
   @override
-  int get hashCode => session.hashCode;
+  int get hashCode => key.hashCode;
 
   @override
   bool operator ==(Object other) {
-    return other is NetworkSession && session == other.session;
+    return other is NetworkSession && key == other.key;
   }
 
   @override
-  String toString() => jsonEncode(value);
+  String toString() => jsonEncode(meta);
+}
+
+class DefaultNetworkSession with NetworkSession {
+  Map<String, String> _meta;
+  Map<String, String> _context;
+
+  @override
+  Map<String, String> get meta => _meta;
+
+  @override
+  Map<String, String> get context => _context;
+
+  DefaultNetworkSession(this._meta, this._context);
+
+  factory DefaultNetworkSession.create() => DefaultNetworkSession({}, {});
+
+  factory DefaultNetworkSession.meta(Map<String, String> meta) => DefaultNetworkSession(meta, {});
+
+  factory DefaultNetworkSession.session(String session) => DefaultNetworkSession({"key": session}, {});
 }
 
 mixin NetworkConnection {
-  NetworkSession? session;
-  NetworkState? state;
+  NetworkSession get session;
+  NetworkState get state;
   bool get isServer;
   bool get isClient;
   Future<void> networkSync(NetworkSyncData data) => throw UnimplementedError();
 }
 
 enum NetworkState {
+  none,
   connecting,
   ready,
   closing,
@@ -64,7 +78,7 @@ mixin NetworkCallback {
 }
 
 mixin NetworkTransport {
-  NetworkSession session = NetworkSession.create();
+  NetworkSession session = DefaultNetworkSession.create();
   Duration keepalive = const Duration(seconds: 3);
   Duration timeout = const Duration(seconds: 5);
   late NetworkCallback callback;
@@ -78,7 +92,7 @@ mixin NetworkTransport {
 
 mixin NetworkEvent {
   Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
-    var user = conn.session?.user ?? "";
+    var user = conn.session.user ?? "";
     if (user.isNotEmpty && state == NetworkState.ready && all.length == 1) {
       await onNetworkUserConnected(conn, user, info: info);
     }
@@ -120,7 +134,7 @@ class NetworkSyncData {
 
   factory NetworkSyncData.create({List<NetworkSyncDataComponent>? components, bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: "*", whole: whole, components: components ?? List.empty(growable: true));
 
-  factory NetworkSyncData.syncSend(group, {bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: group, whole: whole, components: NetworkComponent.syncSend(group, whole: whole));
+  factory NetworkSyncData.syncSend(String group, {bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: group, whole: whole, components: NetworkComponent.syncSend(group, whole: whole));
 }
 
 abstract class NetworkManager with NetworkTransport, NetworkCallback {
@@ -166,7 +180,7 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
   @override
   @mustCallSuper
   Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
-    var group = conn.session?.group ?? "";
+    var group = conn.session.group ?? "";
     if (isServer && conn.isServer && state == NetworkState.ready) {
       var data = NetworkSyncData.syncSend(group, whole: true);
       if (data.isUpdated) {
@@ -194,7 +208,7 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
   Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async => NetworkComponent.syncRecv(data.group, data.components, whole: data.whole);
 
   Future<void> onNetworkPing(NetworkConnection conn, Duration ping) async {
-    var group = conn.session?.group ?? "";
+    var group = conn.session.group ?? "";
     await Future.forEach(_events.keys, (event) async {
       var g = _events[event];
       if (g == group || g == "*") {
@@ -240,7 +254,7 @@ mixin NetworkValue {
   void decode(dynamic v);
 }
 
-typedef NetworkCallFunction<R, S> = Future<R> Function(NetworkSession? ctx, String uuid, S);
+typedef NetworkCallFunction<R, S> = Future<R> Function(NetworkSession ctx, String uuid, S);
 
 class NetworkCall<R, S> {
   String name;
@@ -249,7 +263,7 @@ class NetworkCall<R, S> {
   NetworkValue Function()? retNew;
   NetworkCall(this.name, {this.exec, this.argNew, this.retNew});
 
-  Future<String> run(NetworkSession? ctx, String uuid, String arg) async {
+  Future<String> run(NetworkSession ctx, String uuid, String arg) async {
     var a = (argNew?.call()?..decode(arg)) ?? decode(arg);
     var r = await exec!(ctx, uuid, a);
     return encode(r);
@@ -716,7 +730,7 @@ mixin NetworkComponent {
     return call.call(this, arg);
   }
 
-  static Future<NetworkCallResult> callNetworkCall(NetworkSession? ctx, NetworkCallArg arg) async {
+  static Future<NetworkCallResult> callNetworkCall(NetworkSession ctx, NetworkCallArg arg) async {
     var c = findComponent(arg.nCID);
     if (c == null) {
       throw Exception("NetworkComponent(${arg.nCID}) is not exists");

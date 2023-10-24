@@ -28,7 +28,7 @@ func TestGRPC(t *testing.T) {
 	newTestTransport := func() *NetworkTransportGRPC {
 		n := NewNetworkTransportGRPC()
 		n.GrpcAddress, _ = url.Parse("grpc://127.0.0.1:50060")
-		n.WebAddress, _ = url.Parse("ws://127.0.0.1:50061/")
+		n.WebAddress, _ = url.Parse("ws://127.0.0.1:50061")
 		return n
 	}
 	Network.IsServer = true
@@ -172,7 +172,7 @@ func TestGRPC(t *testing.T) {
 		s.Length()
 		s.Delete("a")
 		s.Exist("a")
-		NewOutgoingContext(context.Background(), NewNetworkSession(xmap.NewSafeByBase(s)))
+		NewOutgoingContext(context.Background(), NewDefaultNetworkSessionByMeta(xmap.NewSafeByBase(s)))
 	}
 	if tester.Run() { //cover 2
 		sd := &grpc.SyncData{
