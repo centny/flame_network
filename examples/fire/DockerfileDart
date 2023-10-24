@@ -1,0 +1,17 @@
+FROM flutter:latest
+ADD . /src
+WORKDIR /src/examples/fire
+RUN /sdk/bin/flutter build bundle
+RUN /sdk/bin/dart /sdk/bin/cache/dart-sdk/bin/snapshots/frontend_server.dart.snapshot \
+    --sdk-root /sdk/bin/cache/artifacts/engine/common/flutter_patched_sdk/ \
+    --target=flutter --enable-asserts \
+    --output-dill build/fire.dill \
+    lib/main.dart
+
+FROM ubuntu:22.04
+COPY --from=0 /sdk/bin/cache/artifacts/engine/linux-x64/ /app/
+COPY --from=0 /src/examples/fire/build/flutter_assets /app/assets
+COPY --from=0 /src/examples/fire/build/fire.dill /app/fire.dill
+WORKDIR /app
+ENV MODE=server
+ENTRYPOINT ["/app/flutter_tester","--disable-vm-service","--flutter-assets-dir=assets","fire.dill"]

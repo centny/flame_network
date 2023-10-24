@@ -1,0 +1,7 @@
+FROM ubuntu:22.04
+ARG VER
+RUN apt update && apt install -y git unzip zip curl clang cmake ninja-build pkg-config libgtk-3-dev && apt clean all
+RUN git clone https://github.com/flutter/flutter.git /sdk
+WORKDIR /sdk
+RUN git checkout ${VER}
+RUN /sdk/bin/flutter doctor

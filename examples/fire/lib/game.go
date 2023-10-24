@@ -63,6 +63,13 @@ func Run() {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
+	network.Network.IsServer = true
+	network.Network.Transport = network.NewNetworkTransportGRPC()
+	err := network.Network.Start()
+	if err != nil {
+		panic(err)
+	}
+
 	interval := time.Second / 60
 	timeStart := time.Now().UnixNano()
 	ticker := time.NewTicker(interval)

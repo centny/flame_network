@@ -1,0 +1,12 @@
+FROM golang:1.21
+ADD . /src
+WORKDIR /src/examples/fire
+RUN go build -v -o fire
+
+FROM alpine:latest
+RUN apk add --no-cache tzdata libc6-compat
+ENV TZ Asia/Shanghai
+RUN apk add --no-cache ca-certificates
+COPY --from=0 /src/examples/fire/fire /app/fire
+WORKDIR /app
+ENTRYPOINT ["/app/fire"]
