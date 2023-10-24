@@ -354,7 +354,7 @@ class NetworkProp<T> {
 
   void Function(T v)? onUpdate;
 
-  NetworkProp(this.name, this._value);
+  NetworkProp(this.name, T defaultValue) : _value = defaultValue;
 
   dynamic syncSend() {
     _updated = false;

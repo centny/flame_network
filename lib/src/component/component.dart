@@ -41,7 +41,7 @@ extension Vector3Extension on Vector3 {
 }
 
 class NetworkPropVector2 extends NetworkProp<Vector2> {
-  NetworkPropVector2(super.name, super.value);
+  NetworkPropVector2(super.name, super.defaultValue);
 
   @override
   dynamic encode() => jsonEncode(value.storage);
@@ -54,7 +54,7 @@ class NetworkPropVector2 extends NetworkProp<Vector2> {
 }
 
 class NetworkPropVector3 extends NetworkProp<Vector3> {
-  NetworkPropVector3(super.name, super.value);
+  NetworkPropVector3(super.name, super.defaultValue);
 
   @override
   dynamic encode() => jsonEncode(value.storage);
@@ -67,7 +67,7 @@ class NetworkPropVector3 extends NetworkProp<Vector3> {
 }
 
 class NetworkPropColor extends NetworkProp<Color> {
-  NetworkPropColor(super.name, super.value);
+  NetworkPropColor(super.name, super.defaultValue);
 
   @override
   dynamic encode() => jsonEncode(value.value);
@@ -77,7 +77,7 @@ class NetworkPropColor extends NetworkProp<Color> {
 }
 
 class NetworkPropList<T> extends NetworkProp<List<T>> {
-  NetworkPropList(super.name, super.value);
+  NetworkPropList(super.name, super.defaultValue);
 
   @override
   void decode(v) => value = (jsonDecode(v) as List<dynamic>).map((e) => e as T).toList();
