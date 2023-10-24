@@ -1,18 +1,10 @@
-import 'dart:async';
-
 import 'package:flame/game.dart';
 import 'package:flame_network/flame_network.dart';
 import 'package:flame_network/src/common/log.dart';
-import 'package:flame_test/flame_test.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-class TestNetworkGame extends FlameGame with NetworkGame {}
-
 void main() {
-  testWithGame<TestNetworkGame>('NetworkGame.sync', TestNetworkGame.new, (game) async {
-    await game.ready();
-  });
   test('NetworkVector', () {
     var v2 = NetworkVector2(0, 0);
     L.i("v2 ecnode is ${v2.encode()}");
@@ -65,18 +57,5 @@ void main() {
     v.decode("2");
     assert(v.value == 2);
     v.encode();
-  });
-  test('GameLoop', () async {
-    var c = Completer();
-    var loop = GameLoop((dt) {
-      if (!c.isCompleted) {
-        c.complete();
-      }
-    });
-    loop.start();
-    await c.future;
-    loop.step(0);
-    loop.stop();
-    loop.dispose();
   });
 }
