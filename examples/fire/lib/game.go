@@ -3,7 +3,6 @@ package lib
 import (
 	"fmt"
 	"math"
-	"runtime"
 	"sync"
 	"time"
 
@@ -57,37 +56,6 @@ func (v Vec) Reflect(o Vec) Vec {
 
 func (v Vec) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf("[%.02f,%0.02f]", v[0], v[1])), nil
-}
-
-func Run() {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	network.Network.IsServer = true
-	network.Network.Transport = network.NewNetworkTransportGRPC()
-	err := network.Network.Start()
-	if err != nil {
-		panic(err)
-	}
-
-	interval := time.Second / 60
-	timeStart := time.Now().UnixNano()
-	ticker := time.NewTicker(interval)
-	exiter := make(chan int, 1)
-	game := NewGame()
-	for {
-		select {
-		case <-ticker.C:
-			now := time.Now().UnixNano()
-			// DT in ms
-			delta := float64(now-timeStart) / 1000000000
-			timeStart = now
-			game.Update(delta)
-			network.Network.Sync(game.Group)
-		case <-exiter:
-			ticker.Stop()
-		}
-	}
 }
 
 const (

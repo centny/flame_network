@@ -19,14 +19,16 @@ void main() async {
   var mode = environment("MODE");
   if (mode == "server") {
     var grpcAddr = environment("GRPC_ADDR");
+    if (grpcAddr.isEmpty) {
+      grpcAddr = "grpc://0.0.0.0:50051";
+    }
     var webAddr = environment("WEB_ADDR");
+    if (webAddr.isEmpty) {
+      webAddr = "ws://0.0.0.0:50052";
+    }
     L.i("server is starting by grpc:$grpcAddr,web:$webAddr");
-    if (grpcAddr.isNotEmpty) {
-      NetworkManagerGRPC.shared.grpcAddress = Uri.parse(grpcAddr);
-    }
-    if (webAddr.isNotEmpty) {
-      NetworkManagerGRPC.shared.webAddress = Uri.parse(webAddr);
-    }
+    NetworkManagerGRPC.shared.grpcAddress = Uri.parse(grpcAddr);
+    NetworkManagerGRPC.shared.webAddress = Uri.parse(webAddr);
     NetworkManagerGRPC.shared.isClient = false;
     NetworkManagerGRPC.shared.isServer = true;
     WidgetsFlutterBinding.ensureInitialized();
