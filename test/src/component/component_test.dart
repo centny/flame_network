@@ -18,6 +18,9 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
   Future<void> networkSync(NetworkSyncData data) {
     throw Exception("abc");
   }
+
+  @override
+  Future<void> ready() async => isReady = true;
 }
 
 void main() {

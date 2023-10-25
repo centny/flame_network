@@ -239,6 +239,9 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
   Future<void> networkSync(NetworkSyncData data) {
     return onNetworkSync(conn, data);
   }
+
+  @override
+  Future<void> ready() async => isReady = true;
 }
 
 void main() {
@@ -513,5 +516,6 @@ void main() {
     var conn = TestNetworkConnection();
     var cb = TestNetworkManager();
     cb.onNetworkState(HashSet.from([conn]), conn, NetworkState.ready);
+    await conn.close();
   });
 }

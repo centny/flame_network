@@ -39,6 +39,7 @@ class TestNetworkCallback with NetworkCallback {
   final StreamController<String> _dataWaiter = StreamController<String>();
   late StreamIterator<String> connWaiter;
   late StreamIterator<String> dataWaiter;
+  bool rejctConn = false;
   bool syncError = false;
 
   TestNetworkCallback() {
@@ -68,6 +69,9 @@ class TestNetworkCallback with NetworkCallback {
     L.i("[Test] connection to $state,server:${conn.isServer},client:${conn.isClient},info:$info");
     if (conn.isServer) {
       _connWaiter.add("$state");
+    }
+    if (conn.isServer && state == NetworkState.ready && rejctConn) {
+      await conn.close();
     }
   }
 
@@ -127,6 +131,7 @@ void main() {
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
     await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.ready();
     var connected = await callback.waitConn();
     L.i("conn is $connected");
     nc.sInt.value = 1;
@@ -159,6 +164,7 @@ void main() {
     NetworkManagerGRPC.shared.callback = callback;
     NetworkManagerGRPC.shared.grpcOn = false;
     await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.ready();
     var connected = await callback.waitConn();
     L.i("conn is $connected");
     NetworkManagerGRPC.shared.networkSync(NetworkSyncData.create(components: [
@@ -179,6 +185,7 @@ void main() {
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
     await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.ready();
     var connected = await callback.waitConn();
     L.i("conn is $connected");
     var result = await NetworkManagerGRPC.shared.networkCall(NetworkCallArg(uuid: "123", nCID: "a", nName: "echo", nArg: "abc"));
@@ -192,6 +199,7 @@ void main() {
     NetworkManagerGRPC.shared.callback = callback;
     NetworkManagerGRPC.shared.keepalive = const Duration(milliseconds: 10);
     await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.ready();
     var ready = await callback.waitConn();
     L.i("conn is $ready");
     await NetworkManagerGRPC.shared.ping(const Duration(seconds: 3));
@@ -208,6 +216,7 @@ void main() {
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
     await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.ready();
     var ready = await callback.waitConn();
     L.i("conn is $ready");
     await NetworkManagerGRPC.shared.client?.stopMonitorSync();
@@ -226,6 +235,7 @@ void main() {
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
     await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.ready();
     var ready = await callback.waitConn();
     L.i("conn is $ready");
     NetworkManagerGRPC.shared.client = null;
@@ -235,6 +245,21 @@ void main() {
     L.i("reconnect is $reconnect");
     await NetworkManagerGRPC.shared.stop();
   });
+  test('NetworkGRPC.reject', () async {
+    var nc = TestNetworkComponent();
+    var callback = TestNetworkCallback();
+    callback.rejctConn = true;
+    NetworkManagerGRPC.shared.isServer = true;
+    NetworkManagerGRPC.shared.isClient = true;
+    NetworkManagerGRPC.shared.callback = callback;
+    await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.ready();
+    var connected = await callback.waitConn();
+    L.i("conn is $connected");
+    await Future.delayed(const Duration(milliseconds: 100));
+    nc.unregister();
+    await NetworkManagerGRPC.shared.stop();
+  });
   test('NetworkGRPC.cover', () async {
     var callback = TestNetworkCallback();
     var conn = TestNetworkConnection();
@@ -242,6 +267,7 @@ void main() {
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
     await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.ready();
     await callback.waitConn();
 
     var connector = WebSocketChannelConnector(NetworkManagerGRPC.shared.webAddress);

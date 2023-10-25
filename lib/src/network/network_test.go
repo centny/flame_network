@@ -178,6 +178,13 @@ func (t *TestNetworkTransport) Stop() (err error) {
 	// }()
 	return
 }
+func (t *TestNetworkTransport) IsReady() (ready bool) {
+	ready = true
+	return
+}
+func (t *TestNetworkTransport) Ready() (err error) {
+	return
+}
 func (t *TestNetworkTransport) NetworkSync(data *NetworkSyncData) {
 	t.callback.OnNetworkSync(t.conn, data)
 }

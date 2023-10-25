@@ -60,6 +60,7 @@ mixin NetworkConnection {
   bool get isServer;
   bool get isClient;
   Future<void> networkSync(NetworkSyncData data) => throw UnimplementedError();
+  Future<void> close() async {}
 }
 
 enum NetworkState {
@@ -84,8 +85,10 @@ mixin NetworkTransport {
   late NetworkCallback callback;
   bool isServer = false;
   bool isClient = false;
+  bool isReady = false;
   bool get standalone => isServer && isClient;
   set standalone(bool v) => isServer = isClient = v;
+  Future<void> ready();
   Future<void> networkSync(NetworkSyncData data);
   Future<NetworkCallResult> networkCall(NetworkCallArg arg);
 }

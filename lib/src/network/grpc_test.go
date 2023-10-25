@@ -23,7 +23,7 @@ import (
 func TestGRPC(t *testing.T) {
 	tester := xdebug.CaseTester{
 		0: 1,
-		6: 1,
+		2: 1,
 	}
 	newTestTransport := func() *NetworkTransportGRPC {
 		n := NewNetworkTransportGRPC()
@@ -31,12 +31,20 @@ func TestGRPC(t *testing.T) {
 		n.WebAddress, _ = url.Parse("ws://127.0.0.1:50061")
 		return n
 	}
-	Network.IsServer = true
-	Network.IsClient = true
-	Network.SetGroup("test")
-	Network.Transport = newTestTransport()
+	resetNetwork := func() {
+		Network.IsServer = true
+		Network.IsClient = true
+		Network.SetGroup("test")
+		Network.Transport = newTestTransport()
+	}
 	if tester.Run() { //NetworkManager.sync
+		resetNetwork()
 		err := Network.Start()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = Network.Ready()
 		if err != nil {
 			t.Error(err)
 			return
@@ -64,8 +72,14 @@ func TestGRPC(t *testing.T) {
 		Network.Stop()
 	}
 	if tester.Run() { //NetworkManager.keep
+		resetNetwork()
 		Network.Keepalive = 100 * time.Millisecond
 		err := Network.Start()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = Network.Ready()
 		if err != nil {
 			t.Error(err)
 			return
@@ -77,9 +91,15 @@ func TestGRPC(t *testing.T) {
 		Network.Stop()
 	}
 	if tester.Run() { //NetworkManager.web
+		resetNetwork()
 		Network.Transport.(*NetworkTransportGRPC).GrpcOn = false
 		Network.Transport.(*NetworkTransportGRPC).WebOn = true
 		err := Network.Start()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = Network.Ready()
 		if err != nil {
 			t.Error(err)
 			return
@@ -162,6 +182,48 @@ func TestGRPC(t *testing.T) {
 		}
 		n.Stop()
 	}
+	if tester.Run() { //NetworkManager.ready
+		resetNetwork()
+		err := Network.Ready()
+		if err == nil {
+			t.Error("error")
+			return
+		}
+		err = Network.Start()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if Network.IsReady() {
+			t.Error("error")
+			return
+		}
+		err = Network.Ready()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !Network.IsReady() {
+			t.Error("error")
+			return
+		}
+		err = Network.Ready()
+		if err == nil {
+			t.Error("error")
+			return
+		}
+		Network.Stop()
+		//
+		Network.IsServer = true
+		Network.IsClient = false
+		transport := newTestTransport()
+		err = transport.Start()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		transport.Stop()
+	}
 	if tester.Run() { //cover 1
 		s := NetworkSessionValueGRPC{}
 		s.SetValue("a", 123)
@@ -202,22 +264,39 @@ func TestGRPC(t *testing.T) {
 		conn.State()
 		conn.IsClient()
 		conn.IsServer()
+		conn.NetworkSync(nil)
 
 		c1 := NewNetworkSyncStreamGRPC(nil, nil)
 		c1.Close()
 		c1.Close()
 	}
 	if tester.Run() { //cover 4
+		resetNetwork()
 		err := Network.Start()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = Network.Ready()
 		if err != nil {
 			t.Error(err)
 			return
 		}
 		transport := Network.Transport.(*NetworkTransportGRPC)
 		client := transport.Client
+		client.Close()
+		transport.procKeep()
 		Network.Stop()
+		client.Stop()
+		err = client.Start()
+		if err == nil {
+			t.Error(err)
+			return
+		}
 
 		client.NetworkCall(&NetworkCallArg{})
+
+		transport = newTestTransport()
 
 		transport.GrpcOpts = append(transport.GrpcOpts, ggrpc.WithTransportCredentials(nil))
 		err = transport.connect()

@@ -445,6 +445,10 @@ func (n *NetworkClientGRPC) loopSync() (err error) {
 }
 
 func (n *NetworkClientGRPC) Start() (err error) {
+	if n.sync != nil {
+		err = fmt.Errorf("started")
+		return
+	}
 	ctx := NewOutgoingContext(context.Background(), Network.NetworkSession)
 	n.sync, err = n.RemoteSync(ctx, &grpc.SyncArg{
 		Id: &grpc.RequestID{Uuid: uuid.New()},
@@ -460,6 +464,7 @@ func (n *NetworkClientGRPC) Start() (err error) {
 func (n *NetworkClientGRPC) Stop() (err error) {
 	n.Close()
 	n.waiter.Wait()
+	n.sync = nil
 	return
 }
 
@@ -645,6 +650,7 @@ type NetworkTransportGRPC struct {
 	Websocket    *NetworkWebsocketServerGRPC
 	initial      bool
 	running      bool
+	ready        bool
 	exiter       chan int
 	waiter       sync.WaitGroup
 }
@@ -715,7 +721,9 @@ func (n *NetworkTransportGRPC) connect() (err error) {
 		return
 	}
 	n.Client = NewNetworkClientGRPC(connection, Network)
-	err = n.Client.Start()
+	if n.ready {
+		err = n.Client.Start()
+	}
 	return
 }
 
@@ -811,6 +819,9 @@ func (n *NetworkTransportGRPC) Start() (err error) {
 		n.waiter.Add(1)
 		go n.loopKeep()
 	}
+	if Network.IsServer && !Network.IsClient {
+		err = n.Ready()
+	}
 	return
 }
 
@@ -831,6 +842,24 @@ func (n *NetworkTransportGRPC) Stop() (err error) {
 	n.Server.Close()
 	n.Websocket.Close()
 	n.waiter.Wait()
+	n.ready = false
+	return
+}
+
+func (n *NetworkTransportGRPC) IsReady() (ready bool) {
+	ready = n.ready
+	return
+}
+
+func (n *NetworkTransportGRPC) Ready() (err error) {
+	if Network.IsClient {
+		if n.Client == nil {
+			err = fmt.Errorf("not started")
+			return
+		}
+		err = n.Client.Start()
+	}
+	n.ready = err == nil
 	return
 }
 

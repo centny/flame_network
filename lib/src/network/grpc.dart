@@ -139,7 +139,10 @@ class _NetworkSyncStream extends NetworkServerConnGRPC {
     controller.sink.add(data);
   }
 
+  @override
   Future<void> close() async {
+    mState = NetworkState.closed;
+    await super.close();
     await controller.sink.close();
   }
 
@@ -196,11 +199,15 @@ class NetworkServerGRPC extends ServerServiceBase {
   }
 
   void _addStream(_NetworkSyncStream conn) {
-    _sessionConnAll(conn.session.key).add(conn);
-    _sessionConnGroup(conn.session.group ?? "").add(conn);
-    _sessionConnGroup("*").add(conn);
-    L.d("[GRPC] add one network sync stream on ${conn.session.group}/${conn.session.user}/${conn.session.key}");
     _networkState(conn, NetworkState.ready);
+    if (conn.state == NetworkState.ready) {
+      _sessionConnAll(conn.session.key).add(conn);
+      _sessionConnGroup(conn.session.group ?? "").add(conn);
+      _sessionConnGroup("*").add(conn);
+      L.d("[GRPC] add one network sync stream on ${conn.session.group}/${conn.session.user}/${conn.session.key}");
+    } else {
+      L.d("[GRPC] remove one network sync stream on ${conn.session.group}/${conn.session.user}/${conn.session.key}");
+    }
   }
 
   void _cancleStream(_NetworkSyncStream conn) {
@@ -609,7 +616,9 @@ class NetworkManagerGRPC extends NetworkManager {
       throw Exception("not configured");
     }
     client = NetworkClientGRPC(channel!, callback);
-    client?.startMonitorSync();
+    if (isReady) {
+      client?.startMonitorSync();
+    }
   }
 
   Future<void> _ticker() async {
@@ -683,10 +692,14 @@ class NetworkManagerGRPC extends NetworkManager {
       await reconnect();
     }
     await _ticker();
+    if (isServer && !isClient) {
+      await ready();
+    }
   }
 
   Future<void> stop() async {
     running = false;
+    isReady = false;
     timer?.cancel();
     if (isServer && server != null) {
       L.i("[GRPC] server is stopping");
@@ -701,6 +714,14 @@ class NetworkManagerGRPC extends NetworkManager {
       await client?.shutdown();
       channel = null;
       client = null;
+    }
+  }
+
+  @override
+  Future<void> ready() async {
+    isReady = true;
+    if (isClient) {
+      client?.startMonitorSync();
     }
   }
 

@@ -124,6 +124,8 @@ type NetworkCallback interface {
 type NetworkTransport interface {
 	Start() (err error)
 	Stop() (err error)
+	IsReady() (ready bool)
+	Ready() (err error)
 	NetworkSync(data *NetworkSyncData)
 	NetworkCall(arg *NetworkCallArg) (ret *NetworkCallResult, err error)
 }
@@ -263,6 +265,16 @@ func (n *NetworkManager) Start() (err error) {
 
 func (n *NetworkManager) Stop() (err error) {
 	err = n.Transport.Stop()
+	return
+}
+
+func (n *NetworkManager) IsReady() (ready bool) {
+	ready = n.Transport.IsReady()
+	return
+}
+
+func (n *NetworkManager) Ready() (err error) {
+	err = n.Transport.Ready()
 	return
 }
 
