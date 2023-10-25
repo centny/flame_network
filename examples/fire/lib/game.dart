@@ -221,7 +221,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
 
   @override
   void onPanUpdate(DragUpdateInfo info) async {
-    var p = camera.globalToLocal(info.eventPosition.game);
+    var p = camera.globalToLocal(info.eventPosition.global);
     p = Vector2(p.x / scale.x, p.y / scale.y);
     await Player.current?.turnTo(p);
   }
