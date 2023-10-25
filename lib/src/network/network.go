@@ -63,11 +63,11 @@ func (n *DefaultNetworkSession) SetKey(key string) {
 }
 
 func (n *DefaultNetworkSession) Group() string {
-	return n.meta.StrDef("", "group")
+	return n.StrDef("", "group")
 }
 
 func (n *DefaultNetworkSession) SetGroup(group string) {
-	n.meta.SetValue("group", group)
+	n.SetValue("group", group)
 }
 
 func (n *DefaultNetworkSession) User() string {

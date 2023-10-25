@@ -17,11 +17,11 @@ mixin NetworkSession {
   String get key => meta["key"] ?? "";
   set key(String v) => meta["key"] = v;
 
-  String? get group => meta["group"];
-  set group(String? v) => meta["group"] = v!;
-
   String? get user => meta["user"];
   set user(String? v) => meta["user"] = v!;
+
+  String? get group => context["group"];
+  set group(String? v) => context["group"] = v!;
 
   @override
   int get hashCode => key.hashCode;
