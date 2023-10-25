@@ -136,6 +136,7 @@ func (g *FireGame) onPlayerJoin(ctx network.NetworkSession, _ string, name strin
 	defer g.lock.Unlock()
 
 	if g.playerAll[owner] != nil {
+		ctx.SetGroup(g.Group)
 		result = "OK"
 		return
 	}
@@ -144,6 +145,7 @@ func (g *FireGame) onPlayerJoin(ctx network.NetworkSession, _ string, name strin
 		result = "Seat Full"
 		return
 	}
+	ctx.SetGroup(g.Group)
 	player := NewPlayer(g, uuid.New())
 	player.Position = g.seatPosition[seat]
 	player.SetName(name)
