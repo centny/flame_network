@@ -103,12 +103,14 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     }
     var owner = ctx.user ?? "";
     if (players.containsKey(owner)) {
+      ctx.group = nGroup;
       return "OK";
     }
     var seat = requestSeat();
     if (seat < 0) {
       return "Seat Full";
     }
+    ctx.group = nGroup;
     var player = Player(group: nGroup, cid: const Uuid().v1())
       ..nName.value = name
       ..nOwner = owner
@@ -169,7 +171,11 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
 
   Future<String> join(String name) async {
     if (isClient) {
-      return await networkCall(nJoin, name);
+      var res = await networkCall(nJoin, name);
+      if (res == "OK") {
+        await NetworkManager.global.ready(); //read to sync
+      }
+      return res;
     }
     return "";
   }
