@@ -70,6 +70,9 @@ class TestNetworkCallback with NetworkCallback {
     if (conn.isServer) {
       _connWaiter.add("$state");
     }
+    if (conn.isServer && state == NetworkState.ready) {
+      conn.session.group = "test";
+    }
     if (conn.isServer && state == NetworkState.ready && rejctConn) {
       await conn.close();
     }
@@ -158,6 +161,7 @@ void main() {
     NetworkManagerGRPC.shared.security = null;
   });
   test('NetworkGRPC.web', () async {
+    var nc = TestNetworkComponent();
     var callback = TestNetworkCallback();
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
@@ -178,6 +182,7 @@ void main() {
     L.i("data is $received");
     await NetworkManagerGRPC.shared.stop();
     NetworkManagerGRPC.shared.grpcOn = !kIsWeb;
+    nc.unregister();
   });
   test('NetworkGRPC.call', () async {
     var callback = TestNetworkCallback();

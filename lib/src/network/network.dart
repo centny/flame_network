@@ -30,9 +30,6 @@ mixin NetworkSession {
   bool operator ==(Object other) {
     return other is NetworkSession && key == other.key;
   }
-
-  @override
-  String toString() => jsonEncode(meta);
 }
 
 class DefaultNetworkSession with NetworkSession {

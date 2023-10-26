@@ -255,7 +255,6 @@ void main() {
     assert(session1.key == "123");
     assert(session0.hashCode == session1.hashCode);
     assert(session0 == session1);
-    assert(session0.toString() != session1.toString());
     session0.context["abc"] = "123";
     assert(session0.context.isNotEmpty);
   });
