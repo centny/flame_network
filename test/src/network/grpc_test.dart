@@ -146,6 +146,7 @@ void main() {
     var received = await callback.waitData();
     L.i("data is $received");
     nc.unregister();
+    await NetworkManagerGRPC.shared.pause();
     await NetworkManagerGRPC.shared.stop();
   });
   test('NetworkGRPC.tls', () async {

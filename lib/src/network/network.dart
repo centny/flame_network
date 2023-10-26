@@ -86,6 +86,7 @@ mixin NetworkTransport {
   bool get standalone => isServer && isClient;
   set standalone(bool v) => isServer = isClient = v;
   Future<void> ready();
+  Future<void> pause();
   Future<void> networkSync(NetworkSyncData data);
   Future<NetworkCallResult> networkCall(NetworkCallArg arg);
 }

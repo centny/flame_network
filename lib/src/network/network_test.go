@@ -185,6 +185,9 @@ func (t *TestNetworkTransport) IsReady() (ready bool) {
 func (t *TestNetworkTransport) Ready() (err error) {
 	return
 }
+func (t *TestNetworkTransport) Pause() (err error) {
+	return
+}
 func (t *TestNetworkTransport) NetworkSync(data *NetworkSyncData) {
 	t.callback.OnNetworkSync(t.conn, data)
 }

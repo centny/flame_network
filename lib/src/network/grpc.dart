@@ -735,6 +735,14 @@ class NetworkManagerGRPC extends NetworkManager {
     }
   }
 
+  @override
+  Future<void> pause() async {
+    isReady = false;
+    if (isClient) {
+      client?.stopMonitorSync();
+    }
+  }
+
   Future<DateTime> ping(Duration timeout) async {
     return client!.ping(timeout);
   }

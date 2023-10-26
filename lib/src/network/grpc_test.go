@@ -70,6 +70,7 @@ func TestGRPC(t *testing.T) {
 
 		nc.Unregister()
 
+		Network.Pause()
 		Network.Stop()
 	}
 	if tester.Run() { //NetworkManager.keep
@@ -290,6 +291,11 @@ func TestGRPC(t *testing.T) {
 		Network.Stop()
 		client.Stop()
 		err = client.Start()
+		if err == nil {
+			t.Error(err)
+			return
+		}
+		err = Network.Pause()
 		if err == nil {
 			t.Error(err)
 			return

@@ -126,6 +126,7 @@ type NetworkTransport interface {
 	Stop() (err error)
 	IsReady() (ready bool)
 	Ready() (err error)
+	Pause() (err error)
 	NetworkSync(data *NetworkSyncData)
 	NetworkCall(arg *NetworkCallArg) (ret *NetworkCallResult, err error)
 }
@@ -275,6 +276,11 @@ func (n *NetworkManager) IsReady() (ready bool) {
 
 func (n *NetworkManager) Ready() (err error) {
 	err = n.Transport.Ready()
+	return
+}
+
+func (n *NetworkManager) Pause() (err error) {
+	err = n.Transport.Pause()
 	return
 }
 

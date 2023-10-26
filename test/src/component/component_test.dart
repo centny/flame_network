@@ -21,6 +21,9 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
 
   @override
   Future<void> ready() async => isReady = true;
+
+  @override
+  Future<void> pause() async => isReady = false;
 }
 
 void main() {

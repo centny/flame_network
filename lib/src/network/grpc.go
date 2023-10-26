@@ -863,6 +863,18 @@ func (n *NetworkTransportGRPC) Ready() (err error) {
 	return
 }
 
+func (n *NetworkTransportGRPC) Pause() (err error) {
+	if Network.IsClient {
+		if n.Client == nil {
+			err = fmt.Errorf("not started")
+			return
+		}
+		err = n.Client.Stop()
+	}
+	n.ready = err == nil
+	return
+}
+
 func (n *NetworkTransportGRPC) NetworkSync(data *NetworkSyncData) {
 	if Network.IsServer {
 		n.Server.NetworkSync(data)
