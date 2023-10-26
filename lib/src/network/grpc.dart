@@ -148,9 +148,17 @@ class _NetworkSyncStream extends NetworkServerConnGRPC {
 
   @override
   Future<void> networkSync(NetworkSyncData data) async {
-    var components = data.components.map((e) => e.wrap());
-    var syncData = SyncData(id: newRequestID(), group: data.group, whole: data.whole, components: components);
-    controller.sink.add(syncData);
+    List<SyncDataComponent> components = [];
+    for (var e in data.components) {
+      var c = e.encode(this);
+      if (c.nRemoved ?? false || (c.nProps?.isNotEmpty ?? false) || (c.nTriggers?.isNotEmpty ?? false)) {
+        components.add(c.wrap());
+      }
+    }
+    if (components.isNotEmpty) {
+      var syncData = SyncData(id: newRequestID(), group: data.group, whole: data.whole, components: components);
+      controller.sink.add(syncData);
+    }
   }
 }
 
