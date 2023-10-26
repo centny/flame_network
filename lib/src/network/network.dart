@@ -380,9 +380,24 @@ class NetworkProp<T> {
 
   void syncRecv(dynamic v) => decode(v);
 
-  dynamic encode() => value is NetworkValue ? value : jsonEncode(value);
+  dynamic encode() {
+    var val = value;
+    if (val is NetworkValue) {
+      return val;
+    } else {
+      return jsonEncode(value);
+    }
+  }
 
-  void decode(dynamic v) => value is NetworkValue ? (value as NetworkValue).decode(v) : value = jsonDecode(v);
+  void decode(dynamic v) {
+    var val = value;
+    if (val is NetworkValue) {
+      val.decode(v);
+      value = val; //trigger setter
+    } else {
+      value = jsonDecode(v);
+    }
+  }
 }
 
 class NetworkTrigger<T> with Stream<T> implements StreamSink<T> {
