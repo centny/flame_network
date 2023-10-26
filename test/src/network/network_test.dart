@@ -515,6 +515,8 @@ void main() {
       NetworkComponent.createComponent("none", "*", "123456");
       assert(false);
     } catch (_) {}
+    NetworkComponent.unregisterFactory(key: "test");
+    NetworkComponent.unregisterFactory(group: "abc");
   });
   test('NetworkComponent.owner', () async {
     var m = TestNetworkManager();

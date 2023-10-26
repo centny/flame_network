@@ -512,6 +512,15 @@ mixin NetworkComponent {
     }
   }
 
+  static void unregisterFactory({String? key, String? group}) {
+    if (group != null) {
+      _factoryAll.remove("$group-*");
+    }
+    if (key != null) {
+      _factoryAll.remove(key);
+    }
+  }
+
   static NetworkComponent createComponent(String key, String group, String cid) {
     var creator = _factoryAll[key] ?? _factoryAll["$group-*"] ?? _factoryAll["*"];
     if (creator == null) {
