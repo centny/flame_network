@@ -35,6 +35,7 @@ func TestGRPC(t *testing.T) {
 		Network.IsServer = true
 		Network.IsClient = true
 		Network.SetGroup("test")
+		Network.SetKey("test")
 		Network.Transport = newTestTransport()
 	}
 	if tester.Run() { //NetworkManager.sync
