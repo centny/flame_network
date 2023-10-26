@@ -90,10 +90,14 @@ class TestNetworkCallback with NetworkCallback {
   @override
   Future<NetworkCallResult> onNetworkCall(NetworkConnection conn, NetworkCallArg arg) async {
     if (arg.nName == "error") {
-      L.i("[Test] call ${arg.nCID}.${arg.nName} ${arg.nArg} => error");
+      L.i("[Test] call $arg => error");
       throw Exception("test error");
     }
-    L.i("[Test] call ${arg.nCID}.${arg.nName} ${arg.nArg}");
+    if (arg.nName == "netError") {
+      L.i("[Test] call $arg => error");
+      NetworkException.must(false, "test error");
+    }
+    L.i("[Test] call $arg");
     return NetworkCallResult(uuid: arg.uuid, nCID: arg.nCID, nName: arg.nName, nResult: arg.nArg);
   }
 }
@@ -277,8 +281,13 @@ void main() {
 
     var connector = WebSocketChannelConnector(NetworkManagerGRPC.shared.webAddress);
     await connector.connect();
+    await Future.delayed(const Duration(milliseconds: 100));
     connector.shutdown();
 
+    try {
+      await NetworkManagerGRPC.shared.networkCall(NetworkCallArg(uuid: "123", nCID: "123", nName: "netError", nArg: "abc"));
+      assert(false);
+    } catch (_) {}
     try {
       await NetworkManagerGRPC.shared.networkCall(NetworkCallArg(uuid: "123", nCID: "123", nName: "error", nArg: "abc"));
       assert(false);

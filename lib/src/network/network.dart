@@ -782,7 +782,9 @@ mixin NetworkComponent {
       var result = await call.run(ctx, arg.uuid, arg.nArg);
       return NetworkCallResult(uuid: arg.uuid, nCID: arg.nCID, nName: arg.nName, nResult: result);
     } catch (e, s) {
-      L.e("NetworkComponent(${c.nFactory},${c.nCID}) call ${call.name} throw error $e\n$s");
+      if (e is! NetworkException) {
+        L.e("NetworkComponent(${c.nFactory},${c.nCID}) call ${call.name} throw error $e\n$s");
+      }
       rethrow;
     }
   }
