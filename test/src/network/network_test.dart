@@ -76,6 +76,7 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
   NetworkCall<void, TestNetworkValue> cNet0 = NetworkCall("net0", argNew: TestNetworkValue.new);
   NetworkCall<TestNetworkValue, int> cNet1 = NetworkCall("net1", retNew: TestNetworkValue.new);
   NetworkCall<TestNetworkValue, TestNetworkValue> cNet2 = NetworkCall("net2", argNew: TestNetworkValue.new, retNew: TestNetworkValue.new);
+  NetworkCall<void, int> cError = NetworkCall("error");
 
   TestNetworkComponent() {
     registerNetworkProp(sInt, getter: () => intValue, setter: (v) => intValue = v);
@@ -93,6 +94,7 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     registerNetworkCall(cNet0, callNet0);
     registerNetworkCall(cNet1, callNet1);
     registerNetworkCall(cNet2, callNet2);
+    registerNetworkCall(cError, callError);
     registerNetworkEvent(event: this, group: "*");
     try {
       registerNetworkProp(sInt);
@@ -118,6 +120,7 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     unregisterNetworkCall(cNet0);
     unregisterNetworkCall(cNet1);
     unregisterNetworkCall(cNet2);
+    unregisterNetworkCall(cError);
     unregisterNetworkEvent(this);
     unregisterFromNetworkManager();
     clearNetworkProp();
@@ -125,28 +128,33 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     clearNetworkCall();
   }
 
-  Future<void> updateInt(NetworkSession? ctx, String uuid, int v) async {
-    L.i("${ctx?.user} call $uuid set sInt=>$v");
+  Future<void> updateInt(NetworkSession ctx, String uuid, int v) async {
+    L.i("${ctx.user} call $uuid set sInt=>$v");
     sInt.value = v;
   }
 
-  Future<String> parseInt(NetworkSession? ctx, String uuid, int v) async {
-    L.i("${ctx?.user} call $uuid parse int=>$v");
+  Future<String> parseInt(NetworkSession ctx, String uuid, int v) async {
+    L.i("${ctx.user} call $uuid parse int=>$v");
     return "$v";
   }
 
-  Future<void> callNet0(NetworkSession? ctx, String uuid, TestNetworkValue v) async {
-    L.i("${ctx?.user} call $uuid net0=>$v");
+  Future<void> callNet0(NetworkSession ctx, String uuid, TestNetworkValue v) async {
+    L.i("${ctx.user} call $uuid net0=>$v");
   }
 
-  Future<TestNetworkValue> callNet1(NetworkSession? ctx, String uuid, int v) async {
-    L.i("${ctx?.user} call $uuid net1=>$v");
+  Future<TestNetworkValue> callNet1(NetworkSession ctx, String uuid, int v) async {
+    L.i("${ctx.user} call $uuid net1=>$v");
     return TestNetworkValue()..value = {"a": 123};
   }
 
-  Future<TestNetworkValue> callNet2(NetworkSession? ctx, String uuid, TestNetworkValue v) async {
-    L.i("${ctx?.user} call $uuid net2=>$v");
+  Future<TestNetworkValue> callNet2(NetworkSession ctx, String uuid, TestNetworkValue v) async {
+    L.i("${ctx.user} call $uuid net2=>$v");
     return v;
+  }
+
+  Future<void> callError(NetworkSession ctx, String uuid, int v) async {
+    L.i("${ctx.user} call $uuid set error=>$v");
+    NetworkException.must(v > 0, "assert v $v>0");
   }
 
   @override
@@ -317,6 +325,12 @@ void main() {
     assert(result2.value["a"] == 123);
     var result3 = await nc.networkCall(nc.cNet2, TestNetworkValue()..value = {"a": 123});
     assert(result3.value["a"] == 123);
+
+    await nc.networkCall(nc.cError, 1);
+    try {
+      await nc.networkCall(nc.cError, 0);
+      assert(false, "fail");
+    } catch (_) {}
 
     //cover
     try {

@@ -289,7 +289,9 @@ class NetworkServerGRPC extends ServerServiceBase {
       var result = await callback.onNetworkCall(conn, arg);
       return result.wrap();
     } catch (e, s) {
-      L.w("[GRPC] network call by $arg throw error $e\n$s");
+      if (e is! NetworkException) {
+        L.w("[GRPC] network call by $arg throw error $e\n$s");
+      }
       return CallResult(id: request.id, cid: request.cid, name: request.name, error: "$e");
     }
   }

@@ -292,6 +292,21 @@ class NetworkCallResult {
   NetworkCallResult({required this.uuid, required this.nCID, required this.nName, required this.nResult});
 }
 
+class NetworkException {
+  String message;
+
+  NetworkException(this.message);
+
+  static void must(bool ok, String message) {
+    if (!ok) {
+      throw NetworkException(message);
+    }
+  }
+
+  @override
+  String toString() => message;
+}
+
 mixin NetworkValue {
   dynamic encode();
   void decode(dynamic v);
