@@ -134,6 +134,7 @@ void main() {
   test('NetworkGRPC.sync', () async {
     var nc = TestNetworkComponent();
     var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.verbose = true;
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
@@ -151,6 +152,7 @@ void main() {
   });
   test('NetworkGRPC.tls', () async {
     var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.verbose = true;
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = false;
     NetworkManagerGRPC.shared.callback = callback;
@@ -168,6 +170,7 @@ void main() {
   test('NetworkGRPC.web', () async {
     var nc = TestNetworkComponent();
     var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.verbose = true;
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
@@ -191,6 +194,7 @@ void main() {
   });
   test('NetworkGRPC.call', () async {
     var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.verbose = true;
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
@@ -204,6 +208,7 @@ void main() {
   });
   test('NetworkGRPC.ping', () async {
     var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.verbose = true;
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
@@ -222,6 +227,7 @@ void main() {
   });
   test('NetworkGRPC.reconnect', () async {
     var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.verbose = true;
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
@@ -241,6 +247,7 @@ void main() {
   });
   test('NetworkGRPC.keep', () async {
     var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.verbose = true;
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
@@ -259,6 +266,7 @@ void main() {
     var nc = TestNetworkComponent();
     var callback = TestNetworkCallback();
     callback.rejctConn = true;
+    NetworkManagerGRPC.shared.verbose = true;
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;
@@ -273,6 +281,7 @@ void main() {
   test('NetworkGRPC.cover', () async {
     var callback = TestNetworkCallback();
     var conn = TestNetworkConnection();
+    NetworkManagerGRPC.shared.verbose = true;
     NetworkManagerGRPC.shared.isServer = true;
     NetworkManagerGRPC.shared.isClient = true;
     NetworkManagerGRPC.shared.callback = callback;

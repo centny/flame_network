@@ -17,6 +17,7 @@ String environment(String key) {
 
 void main() async {
   var mode = environment("MODE");
+  NetworkManagerGRPC.shared.verbose = environment("VERBOSE") == "1";
   if (mode == "service") {
     var grpcAddr = environment("GRPC_ADDR");
     if (grpcAddr.isEmpty) {

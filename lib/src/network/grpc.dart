@@ -157,6 +157,9 @@ class _NetworkSyncStream extends NetworkServerConnGRPC {
     }
     if (components.isNotEmpty) {
       var syncData = SyncData(id: newRequestID(), group: data.group, whole: data.whole, components: components);
+      if (NetworkManager.global.verbose) {
+        L.d("[GRPC] network send to $key by\n${syncData.toDebugString()}");
+      }
       controller.sink.add(syncData);
     }
   }
@@ -245,6 +248,9 @@ class NetworkServerGRPC extends ServerServiceBase {
         continue;
       }
       var syncData = SyncData(id: newRequestID(), group: conn.session.group ?? data.group, whole: data.whole, components: components);
+      if (NetworkManager.global.verbose) {
+        L.d("[GRPC] network send to ${conn.key} by\n${syncData.toDebugString()}");
+      }
       conn.add(syncData);
     }
   }
@@ -284,6 +290,9 @@ class NetworkServerGRPC extends ServerServiceBase {
   @override
   Future<CallResult> remoteCall(ServiceCall call, CallArg request) async {
     var conn = _keepSessionByMeta(call.clientMetadata);
+    if (NetworkManager.global.verbose) {
+      L.d("[GRPC] network call from ${conn.session.key} by ${request.toDebugString()}");
+    }
     var arg = request.wrap();
     try {
       var result = await callback.onNetworkCall(conn, arg);
@@ -354,6 +363,13 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
     return DateTime.fromMillisecondsSinceEpoch(result.serverTime.toInt());
   }
 
+  Future<void> _onNetworkSync(NetworkConnection conn, SyncData data) async {
+    if (NetworkManager.global.verbose) {
+      L.d("[GRPC] network recv from ${conn.session.key} by\n${data.toDebugString()}");
+    }
+    await onNetworkSync(conn, data.wrap());
+  }
+
   Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async {
     try {
       await mCallback.onNetworkSync(conn, data);
@@ -366,7 +382,7 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
     var request = SyncArg(id: newRequestID());
     mMonitor = super.remoteSync(request, options: CallOptions(metadata: session.meta));
     mMonitor?.listen(
-      (data) => onNetworkSync(this, data.wrap()),
+      (data) => _onNetworkSync(this, data),
       onError: (e) => mCallback.onNetworkState(HashSet.from([this]), this, NetworkState.error, info: e),
       cancelOnError: true,
     );
