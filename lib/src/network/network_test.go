@@ -389,6 +389,8 @@ func TestNetwork(t *testing.T) {
 			return nil, fmt.Errorf("error")
 		})
 		ComponentHub.CreateComponent("error-0", "", "1111")
+
+		ComponentHub.UnregisterFactory("*", "xxx")
 	}
 	if tester.Run() { //NetworkComponent.call
 		nc := NewTestNetworkComponent()

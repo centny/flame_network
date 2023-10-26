@@ -943,6 +943,17 @@ func (n *NetworkComponentHub) RegisterFactory(key, group string, creator Network
 	}
 }
 
+func (n *NetworkComponentHub) UnregisterFactory(key, group string) {
+	n.factoryLck.Lock()
+	defer n.factoryLck.Unlock()
+	if len(group) > 0 {
+		delete(n.factoryAll, group+"-*")
+	}
+	if len(key) > 0 {
+		delete(n.factoryAll, key)
+	}
+}
+
 func (n *NetworkComponentHub) CreateComponent(key, group, cid string) (c *NetworkComponent, err error) {
 	creator := n.factoryAll[key]
 	if creator == nil {
