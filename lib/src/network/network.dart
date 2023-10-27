@@ -548,8 +548,8 @@ mixin NetworkComponent {
     return c;
   }
 
-  static void Function(NetworkComponent)? onAdd;
-  static void Function(NetworkComponent)? onRemove;
+  static void Function(NetworkComponent)? onComponentAdd;
+  static void Function(NetworkComponent)? onComponentRemove;
 
   static NetworkComponent? findComponent(String nCID) => _componentAll[nCID];
 
@@ -569,8 +569,8 @@ mixin NetworkComponent {
     _componentAll[c.nCID] = c;
     listGroupComponent(c.nGroup)[c.nCID] = c;
     listGroupComponent("*")[c.nCID] = c;
-    if (onAdd != null) {
-      onAdd!(c);
+    if (onComponentAdd != null) {
+      onComponentAdd!(c);
     }
   }
 
@@ -582,8 +582,8 @@ mixin NetworkComponent {
     listGroupComponent(c.nGroup).remove(c.nCID);
     listGroupComponent("*").remove(c.nCID);
     c.onNetworkRemove();
-    if (onRemove != null) {
-      onRemove!(c);
+    if (onComponentRemove != null) {
+      onComponentRemove!(c);
     }
   }
 

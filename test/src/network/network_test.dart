@@ -414,8 +414,8 @@ void main() {
     NetworkManager.global.isClient = false;
   });
   test('NetworkComponent.create', () async {
-    NetworkComponent.onAdd = (p0) => L.i("add ->${p0.nCID}");
-    NetworkComponent.onRemove = (p0) => L.i("remove ->${p0.nCID}");
+    NetworkComponent.onComponentAdd = (p0) => L.i("add ->${p0.nCID}");
+    NetworkComponent.onComponentRemove = (p0) => L.i("remove ->${p0.nCID}");
     var nc = TestNetworkComponent();
     assert(NetworkComponent.findComponent(nc.nCID) != null);
     nc.unregister();
