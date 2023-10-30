@@ -58,6 +58,33 @@ class NetworkAccessValue<T> with NetworkValue {
   bool access(NetworkSession s) => _access(s);
 }
 
+class NetworkSequencedValue<T> with NetworkValue {
+  int _sequence;
+  dynamic src;
+
+  int get sequence => _sequence;
+
+  NetworkSequencedValue(this.src, {int? sequence}) : _sequence = sequence ?? 0;
+
+  @override
+  void decode(dynamic v) {
+    var str = v as String;
+    var i = str.indexOf("|");
+    _sequence = int.parse(str.substring(0, i));
+    if (src is NetworkValue) {
+      (src as NetworkValue).decode(str.substring(i + 1));
+    } else {
+      src = jsonDecode(str.substring(i + 1));
+    }
+  }
+
+  @override
+  dynamic encode() => "$_sequence|${src is NetworkValue ? (src as NetworkValue).encode() : jsonEncode(src)}";
+
+  @override
+  bool access(NetworkSession s) => src is NetworkValue ? (src as NetworkValue).access(s) : true;
+}
+
 class NetworkPropVector2 extends NetworkProp<Vector2> {
   NetworkPropVector2(super.name, super.defaultValue);
 
@@ -99,6 +126,30 @@ class NetworkPropList<T> extends NetworkProp<List<T>> {
 
   @override
   void decode(v) => value = (jsonDecode(v) as List<dynamic>).map((e) => e as T).toList();
+}
+
+class NetworkSequencedProp<T> extends NetworkProp<T> {
+  int _sequence = 0;
+
+  @override
+  set value(v) {
+    _sequence++;
+    super.value = v;
+  }
+
+  NetworkSequencedProp(super.name, super.defaultValue);
+
+  @override
+  dynamic encode() => NetworkSequencedValue(value, sequence: _sequence);
+
+  @override
+  void decode(dynamic v) {
+    var val = NetworkSequencedValue<T>(value)..decode(v);
+    if (val.sequence > _sequence) {
+      _sequence = val.sequence;
+      super.value = val.src;
+    }
+  }
 }
 
 class NetworkAccessProp<T> extends NetworkProp<NetworkAccessValue<T>> {
