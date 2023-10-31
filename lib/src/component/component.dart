@@ -68,18 +68,17 @@ class NetworkSequencedValue<T> with NetworkValue {
 
   @override
   void decode(dynamic v) {
-    var str = v as String;
-    var i = str.indexOf("|");
-    _sequence = int.parse(str.substring(0, i));
+    var val = v as List<dynamic>;
+    _sequence = val[0];
     if (src is NetworkValue) {
-      (src as NetworkValue).decode(str.substring(i + 1));
+      (src as NetworkValue).decode(v[1]);
     } else {
-      src = jsonDecode(str.substring(i + 1));
+      src = jsonDecode(v[1]);
     }
   }
 
   @override
-  dynamic encode() => "$_sequence|${src is NetworkValue ? (src as NetworkValue).encode() : jsonEncode(src)}";
+  dynamic encode() => [_sequence, src is NetworkValue ? (src as NetworkValue).encode() : jsonEncode(src)];
 
   @override
   bool access(NetworkSession s) => src is NetworkValue ? (src as NetworkValue).access(s) : true;

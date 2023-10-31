@@ -136,7 +136,7 @@ type NetworkEvent interface {
 	OnNetworkPing(conn NetworkConnection, ping time.Duration)
 }
 
-func jsonEncode(v interface{}) string {
+func JsonEncode(v interface{}) string {
 	switch v.(type) {
 	case float32, float64:
 		return fmt.Sprintf("%.02f", v)
@@ -160,10 +160,10 @@ func EncodeProp(props xmap.M, session NetworkSession) xmap.M {
 		switch v := v.(type) {
 		case NetworkValue:
 			if v.Access(session) {
-				propAll[k] = jsonEncode(v)
+				propAll[k] = JsonEncode(v)
 			}
 		default:
-			propAll[k] = jsonEncode(v)
+			propAll[k] = JsonEncode(v)
 		}
 	}
 	return propAll
@@ -177,10 +177,10 @@ func EncodeTrigger(triggers xmap.M, session NetworkSession) xmap.M {
 			switch v := v.(type) {
 			case NetworkValue:
 				if v.Access(session) {
-					valAll = append(valAll, jsonEncode(v))
+					valAll = append(valAll, JsonEncode(v))
 				}
 			default:
-				valAll = append(valAll, jsonEncode(v))
+				valAll = append(valAll, JsonEncode(v))
 			}
 		}
 		if len(valAll) > 0 {

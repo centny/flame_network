@@ -92,6 +92,7 @@ void main() {
     var srv = NetworkSequencedProp<int>("abc", 0);
     srv.value = 2;
     var data = (srv.encode() as NetworkValue).encode();
+    L.i("data is $data");
     var loc = NetworkSequencedProp<int>("abc", 0);
     loc.setter = (v) => setted++;
     loc.decode(data);
