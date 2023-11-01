@@ -189,7 +189,11 @@ func (n *NetworkSyncStreamGRPC) Send(data *grpc.SyncData) (err error) {
 }
 
 func (n *NetworkSyncStreamGRPC) NetworkSync(data *NetworkSyncData) {
-	n.Send(ParseSyncDataGRPC(data.Encode(n.session)))
+	sd := ParseSyncDataGRPC(data.Encode(n.session))
+	if Network.Verbose {
+		Debugf("[GRPC] network send to %v by\n %v", n.session.Key(), converter.JSON(sd))
+	}
+	n.Send(sd)
 }
 
 func (n *NetworkSyncStreamGRPC) Close() (err error) {
@@ -336,6 +340,9 @@ func (n *NetworkServerGRPC) NetworkSync(data *NetworkSyncData) {
 	for _, c := range n.groupConnCopy(data.Group) {
 		sd := ParseSyncDataGRPC(data.Encode(c.session))
 		sd.Group = c.session.Group()
+		if Network.Verbose {
+			Debugf("[GRPC] network send to %v by\n %v", c.session.Key(), converter.JSON(sd))
+		}
 		c.Send(sd)
 	}
 }
@@ -349,6 +356,9 @@ func (n *NetworkServerGRPC) Close() (err error) {
 
 func (n *NetworkServerGRPC) RemoteCall(ctx context.Context, arg *grpc.CallArg) (result *grpc.CallResult, err error) {
 	session := NewNetworkSessionFromGRPC(ctx)
+	if Network.Verbose {
+		Debugf("[GRPC] network call from %v by\n %v", session.Key(), converter.JSON(arg))
+	}
 	conn := n.keepSession(session)
 	ret, xerr := n.callback.OnNetworkCall(conn, &NetworkCallArg{
 		UUID: arg.Id.Uuid,

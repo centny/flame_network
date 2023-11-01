@@ -16,11 +16,13 @@ import (
 	"github.com/codingeasygo/util/xcrypto"
 	"github.com/codingeasygo/util/xdebug"
 	"github.com/codingeasygo/util/xmap"
+	"go.uber.org/zap/zapcore"
 	"golang.org/x/net/websocket"
 	ggrpc "google.golang.org/grpc"
 )
 
 func TestGRPC(t *testing.T) {
+	SetLevel(zapcore.DebugLevel)
 	tester := xdebug.CaseTester{
 		0: 1,
 		2: 1,
@@ -32,6 +34,7 @@ func TestGRPC(t *testing.T) {
 		return n
 	}
 	resetNetwork := func() {
+		Network.Verbose = true
 		Network.IsServer = true
 		Network.IsClient = true
 		Network.SetGroup("test")

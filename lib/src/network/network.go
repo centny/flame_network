@@ -239,6 +239,7 @@ var Network = NewNetworkManager()
 
 type NetworkManager struct {
 	NetworkSession
+	Verbose   bool
 	MinSync   time.Duration
 	Keepalive time.Duration
 	Timeout   time.Duration
