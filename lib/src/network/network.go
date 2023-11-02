@@ -71,11 +71,11 @@ func (n *DefaultNetworkSession) SetGroup(group string) {
 }
 
 func (n *DefaultNetworkSession) User() string {
-	return n.meta.StrDef("", "user")
+	return n.StrDef("", "user")
 }
 
 func (n *DefaultNetworkSession) SetUser(user string) {
-	n.meta.SetValue("user", user)
+	n.SetValue("user", user)
 }
 
 func (n *DefaultNetworkSession) Meta() xmap.Valuable {

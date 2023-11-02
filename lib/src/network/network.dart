@@ -17,8 +17,8 @@ mixin NetworkSession {
   String get key => meta["key"] ?? "";
   set key(String v) => meta["key"] = v;
 
-  String? get user => meta["user"];
-  set user(String? v) => meta["user"] = v!;
+  String? get user => context["user"];
+  set user(String? v) => context["user"] = v!;
 
   String? get group => context["group"];
   set group(String? v) => context["group"] = v!;
