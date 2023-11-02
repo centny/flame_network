@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flame/game.dart';
+import 'package:flame_network/flame_network.dart';
 import 'package:flutter/foundation.dart';
 
-import '../../flame_network.dart';
 import '../common/log.dart';
 
 class GameLoop {

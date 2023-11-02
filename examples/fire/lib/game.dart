@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flame/collisions.dart';
@@ -310,6 +311,16 @@ class Boss extends CircleComponent with NetworkComponent {
 
   @override
   void onNetworkRemove() => removeFromParent();
+}
+
+class NetworkPropColor extends NetworkProp<Color> {
+  NetworkPropColor(super.name, super.defaultValue);
+
+  @override
+  dynamic encode() => jsonEncode(value.value);
+
+  @override
+  void decode(v) => value = Color(jsonDecode(v));
 }
 
 class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {

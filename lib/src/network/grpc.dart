@@ -363,11 +363,13 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
     return DateTime.fromMillisecondsSinceEpoch(result.serverTime.toInt());
   }
 
-  Future<void> _onNetworkSync(NetworkConnection conn, SyncData data) async {
+  Future<void> _onNetworkSync(NetworkConnection conn, SyncData raw) async {
     if (NetworkManager.global.verbose) {
-      L.d("[GRPC] network recv from ${conn.session.key} by\n${data.toDebugString()}");
+      L.d("[GRPC] network recv from ${conn.session.key} by\n${raw.toDebugString()}");
     }
-    await onNetworkSync(conn, data.wrap());
+    var data = raw.wrap();
+    data.components = data.components.map((e) => e.decode()).toList();
+    await onNetworkSync(conn, data);
   }
 
   Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async {

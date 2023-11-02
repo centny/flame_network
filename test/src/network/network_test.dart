@@ -11,14 +11,10 @@ class TestNetworkValue with NetworkValue {
   Map<String, dynamic> value = {};
 
   @override
-  void decode(v) {
-    value = jsonDecode(v);
-  }
+  void decode(v) => value = v;
 
   @override
-  dynamic encode() {
-    return jsonEncode(value);
-  }
+  dynamic encode() => value;
 }
 
 class TestNetworkAccess with NetworkValue {
@@ -245,7 +241,9 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
 
   @override
   Future<void> networkSync(NetworkSyncData data) {
-    return onNetworkSync(conn, data);
+    data.components = data.components.map((e) => e.encode(conn.session)).toList();
+    data.components = data.components.map((e) => e.decode()).toList();
+    return super.onNetworkSync(conn, data);
   }
 
   @override
@@ -381,6 +379,8 @@ void main() {
     L.i("triggers is $triggers");
     triggers = NetworkSyncDataComponent.encodeTrigger(triggers, m.session);
     L.i("triggers is $triggers");
+    triggers = NetworkSyncDataComponent.decodeTrigger(triggers);
+    L.i("triggers is $triggers");
 
     nc.recvNetworkTrigger(triggers);
     await waiter.moveNext();
@@ -437,8 +437,18 @@ void main() {
     var props2 = nc.sendNetworkProp();
     assert(props2.length == 1);
 
-    props["none"] = 1;
+    props = NetworkSyncDataComponent.encodeProp(props, m.session);
+    L.i("props is $props");
+    props = NetworkSyncDataComponent.decodeProp(props);
+    L.i("props is $props");
     nc.recvNetworkProp(props);
+
+    nc.recvNetworkProp({"none": 1});
+
+    try {
+      nc.recvNetworkProp({"int": "100"});
+      assert(false);
+    } catch (_) {}
 
     nc.unregister();
 
@@ -452,8 +462,12 @@ void main() {
   });
   test('NetworkComponent.sync', () async {
     var cb = TestNetworkManager();
-    var nc1 = TestNetworkComponent();
 
+    var nc0 = TestNetworkComponent();
+    cb.sync("*");
+    nc0.unregister();
+
+    var nc1 = TestNetworkComponent();
     assert(nc1.nUpdated);
     var cs1 = NetworkComponent.syncSend("*");
     assert(cs1.length == 1);
@@ -461,15 +475,11 @@ void main() {
     var cs2 = NetworkComponent.syncSend("*");
     assert(cs2.isEmpty);
     cs1[0].nTriggers = {
-      "int": ["1"]
+      "int": [1]
     };
-    NetworkComponent.syncRecv("*", cs1);
-
-    cb.sync("*");
-
+    NetworkComponent.syncRecv("*", cs1.map((e) => e.encode(cb.session).decode()).toList());
     NetworkComponent.syncRecv("*", [], whole: true);
     assert(NetworkComponent.findComponent(nc1.cid) == null);
-
     nc1.unregister();
   });
   test('NetworkComponent.access', () async {
