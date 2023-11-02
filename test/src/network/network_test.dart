@@ -87,7 +87,7 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
     registerNetworkProp(sNet);
     registerNetworkProp(sAcc);
     registerNetworkTrigger(tInt, (p0) => L.i("recieve"), done: () => L.i("done"), error: (p0) => L.i("error"));
-    registerNetworkTrigger(tNet, (p0) => L.i("recieve"), done: () => L.i("done"), error: (p0) => L.i("error"));
+    registerNetworkTrigger(tNet, (p0) => L.i("recieve"), done: () => L.i("done"), error: (p0) => L.i("error"), valNew: TestNetworkValue.new);
     registerNetworkTrigger(tAcc, (p0) => L.i("recieve"), done: () => L.i("done"), error: (p0) => L.i("error"));
     registerNetworkCall(cUpdate, updateInt);
     registerNetworkCall(cParse, parseInt);

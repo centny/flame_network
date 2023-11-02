@@ -661,13 +661,16 @@ mixin NetworkComponent {
   //--------------------------//
   //------ NetworkTrigger -------//
 
-  void registerNetworkTrigger<T>(NetworkTrigger<T> trigger, void Function(T)? recv, {void Function()? done, void Function(dynamic)? error}) {
+  void registerNetworkTrigger<T>(NetworkTrigger<T> trigger, void Function(T)? recv, {void Function()? done, void Function(dynamic)? error, NetworkValue Function()? valNew}) {
     if (_triggers.containsKey(trigger.name)) {
       throw Exception("NetworkTrigger ${trigger.name} is registered");
     }
     trigger.onRecv = recv;
     trigger.onDone = done;
     trigger.onError = error;
+    if (valNew != null) {
+      trigger.valNew = valNew;
+    }
     trigger.onUpdate = (v) => _triggerUpdated = true;
     _triggers[trigger.name] = trigger;
     _addComponent(this);
