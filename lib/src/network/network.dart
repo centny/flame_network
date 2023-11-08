@@ -395,7 +395,7 @@ class NetworkProp<T> {
 
   dynamic encode() => value;
 
-  void decode(dynamic v) => value is NetworkValue ? ((value as NetworkValue)..decode(v)) as T : v as T;
+  void decode(dynamic v) => value = value is NetworkValue ? ((value as NetworkValue)..decode(v)) as T : v as T;
 }
 
 class NetworkTrigger<T> with Stream<T> implements StreamSink<T> {
