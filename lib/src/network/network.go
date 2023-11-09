@@ -362,7 +362,7 @@ type NetworkValue interface {
 
 type NetworkComponentSet map[string]*NetworkComponent
 
-type NetworkComponentFactory func(key string, group string, cid string) (c *NetworkComponent, err error)
+type NetworkComponentFactory func(key, group, owner, cid string) (c *NetworkComponent, err error)
 
 type SyncMap struct {
 	OnUpdate func(key string, val interface{})
@@ -509,8 +509,8 @@ type NetworkComponent struct {
 	*xmap.SafeM
 	Factory         string
 	Group           string
-	CID             string
 	Owner           string
+	CID             string
 	Removed         bool
 	OnNetworkRemove func()
 	OnPropUpdate    map[string]NetworkPropUpdate
@@ -520,10 +520,11 @@ type NetworkComponent struct {
 	callAll         map[string]NetworkCall
 }
 
-func NewNetworkComponent(factory, group, cid string) (c *NetworkComponent) {
+func NewNetworkComponent(factory, group, owner, cid string) (c *NetworkComponent) {
 	c = &NetworkComponent{
 		Factory:      factory,
 		Group:        group,
+		Owner:        owner,
 		CID:          cid,
 		OnPropUpdate: map[string]NetworkPropUpdate{},
 		propAll:      NewSyncMap(),
@@ -955,7 +956,7 @@ func (n *NetworkComponentHub) UnregisterFactory(key, group string) {
 	}
 }
 
-func (n *NetworkComponentHub) CreateComponent(key, group, cid string) (c *NetworkComponent, err error) {
+func (n *NetworkComponentHub) CreateComponent(key, group, owner, cid string) (c *NetworkComponent, err error) {
 	creator := n.factoryAll[key]
 	if creator == nil {
 		creator = n.factoryAll[group+"-*"]
@@ -967,7 +968,7 @@ func (n *NetworkComponentHub) CreateComponent(key, group, cid string) (c *Networ
 		err = fmt.Errorf("NetworkComponentFactory by %v/%v is not supported", group, key)
 		return
 	}
-	c, err = creator(key, group, cid)
+	c, err = creator(key, group, owner, cid)
 	if err != nil {
 		return
 	}
@@ -1043,12 +1044,11 @@ func (n *NetworkComponentHub) SyncRecv(group string, components []*NetworkSyncDa
 		}
 		cidAll[c.CID] = 1
 		if component == nil {
-			component, err = n.CreateComponent(c.Factory, group, c.CID)
+			component, err = n.CreateComponent(c.Factory, group, c.Owner, c.CID)
 			if err != nil {
 				break
 			}
 		}
-		component.Owner = c.Owner
 		if len(c.Props) > 0 {
 			component.RecvNetworkProp(c.Props)
 		}

@@ -114,12 +114,12 @@ mixin NetworkEvent {
 class NetworkSyncDataComponent {
   String nFactory;
   String nCID;
-  String? nOwner;
+  String nOwner;
   bool? nRemoved;
   Map<String, dynamic>? nProps = {};
   Map<String, List<dynamic>>? nTriggers = {};
 
-  NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nOwner, this.nRemoved, this.nProps, this.nTriggers});
+  NetworkSyncDataComponent({required this.nFactory, required this.nCID, this.nOwner = "", this.nRemoved, this.nProps, this.nTriggers});
 
   static Map<String, dynamic> encodeProp(Map<String, dynamic>? props, NetworkSession session) {
     Map<String, dynamic> propAll = {};
@@ -493,7 +493,7 @@ class NetworkTrigger<T> with Stream<T> implements StreamSink<T> {
   List<T> decode(List<dynamic> v) => v.map((e) => valNew != null ? (valNew!()..decode(e)) as T : e as T).toList();
 }
 
-typedef NetworkComponentFactory = NetworkComponent Function(String key, String group, String cid);
+typedef NetworkComponentFactory = NetworkComponent Function(String key, String group, String owner, String cid);
 
 mixin NetworkComponent {
   static final Map<String, NetworkComponentFactory> _factoryAll = {};
@@ -505,15 +505,15 @@ mixin NetworkComponent {
   final Map<String, NetworkTrigger<dynamic>> _triggers = {};
   final Map<String, NetworkCall<dynamic, dynamic>> _calls = {};
 
-  String? nOwner;
   String get nFactory;
   String get nGroup => "";
+  String get nOwner => "";
   String get nCID;
   bool get nRemoved;
   bool get nUpdated => _propUpdated || _triggerUpdated;
   bool get isServer => NetworkManager.global.isServer;
   bool get isClient => NetworkManager.global.isClient;
-  bool get isOwner => nOwner != null && nOwner == NetworkManager.global.user;
+  bool get isOwner => nOwner == NetworkManager.global.user;
 
   //--------------------------//
   //------ NetworkComponent -------//
@@ -536,12 +536,12 @@ mixin NetworkComponent {
     }
   }
 
-  static NetworkComponent createComponent(String key, String group, String cid) {
+  static NetworkComponent createComponent(String key, String group, String owner, String cid) {
     var creator = _factoryAll[key] ?? _factoryAll["$group-*"] ?? _factoryAll["*"];
     if (creator == null) {
       throw Exception("NetworkComponentFactory by $key is not supported");
     }
-    var c = creator(key, group, cid);
+    var c = creator(key, group, owner, cid);
     _addComponent(c);
     return c;
   }
@@ -748,8 +748,7 @@ mixin NetworkComponent {
         continue;
       }
       cidAll.add(c.nCID);
-      component ??= createComponent(c.nFactory, group, c.nCID);
-      component.nOwner = c.nOwner;
+      component ??= createComponent(c.nFactory, group, c.nOwner, c.nCID);
       if (c.nProps?.isNotEmpty ?? false) {
         component.recvNetworkProp(c.nProps ?? {});
       }

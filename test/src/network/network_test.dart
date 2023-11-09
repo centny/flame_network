@@ -40,6 +40,9 @@ class TestNetworkAccess with NetworkValue {
 class TestNetworkComponent with NetworkComponent, NetworkEvent {
   bool removed = false;
   String cid = "123";
+  String owner = "";
+  @override
+  String get nOwner => owner;
   @override
   String get nFactory => "test";
   @override
@@ -513,8 +516,8 @@ void main() {
     nc2.unregister();
   });
   test('NetworkComponent.factory', () async {
-    NetworkComponent.registerFactory(key: "test", creator: (key, group, id) => TestNetworkComponent());
-    NetworkComponent.registerFactory(group: "abc", creator: (key, group, id) => TestNetworkComponent());
+    NetworkComponent.registerFactory(key: "test", creator: (key, group, owner, id) => TestNetworkComponent());
+    NetworkComponent.registerFactory(group: "abc", creator: (key, group, owner, id) => TestNetworkComponent());
     assert(NetworkComponent.findComponent("123") == null);
     var cs1 = [NetworkSyncDataComponent(nFactory: "test", nCID: "123")];
     NetworkComponent.syncRecv("*", cs1);
@@ -525,7 +528,7 @@ void main() {
     assert(NetworkComponent.findComponent("123") == null);
 
     try {
-      NetworkComponent.createComponent("none", "*", "123456");
+      NetworkComponent.createComponent("none", "*", "", "123456");
       assert(false);
     } catch (_) {}
     NetworkComponent.unregisterFactory(key: "test");
@@ -536,7 +539,7 @@ void main() {
     m.session.user = "u123";
     var nc = TestNetworkComponent();
     assert(!nc.isOwner);
-    nc.nOwner = m.session.user;
+    nc.owner = m.session.user!;
     assert(nc.isOwner);
     nc.unregister();
   });

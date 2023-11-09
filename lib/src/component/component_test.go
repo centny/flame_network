@@ -14,7 +14,7 @@ func (t TestNetworkValueNotAccess) Access(s network.NetworkSession) bool {
 }
 
 func TestNetworkSequencedValue(t *testing.T) {
-	c := network.NewNetworkComponent("test", "test", "123")
+	c := network.NewNetworkComponent("test", "test", "", "123")
 	val := NewNetworkSequencedValue(c, "a", 0)
 	fmt.Printf("-->%v\n", val)
 	val.Set(1)

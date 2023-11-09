@@ -37,7 +37,7 @@ type TestNetworkComponent struct {
 
 func NewTestNetworkComponent() (c *TestNetworkComponent) {
 	c = &TestNetworkComponent{
-		NetworkComponent: NewNetworkComponent("test", "test", "123"),
+		NetworkComponent: NewNetworkComponent("test", "test", "", "123"),
 	}
 	c.Refer = c
 	c.OnPropUpdate["*"] = c.onPropAll
@@ -350,7 +350,7 @@ func TestNetwork(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		ComponentHub.RegisterFactory("*", "xxx", func(key, group, cid string) (*NetworkComponent, error) {
+		ComponentHub.RegisterFactory("*", "xxx", func(key, group, owner, cid string) (*NetworkComponent, error) {
 			nc := NewTestNetworkComponent()
 			return nc.NetworkComponent, nil
 		})
@@ -385,10 +385,10 @@ func TestNetwork(t *testing.T) {
 
 		nc.Refer.(*TestNetworkComponent).Unregister()
 
-		ComponentHub.RegisterFactory("error-0", "", func(key, group, cid string) (*NetworkComponent, error) {
+		ComponentHub.RegisterFactory("error-0", "", func(key, group, owner, cid string) (*NetworkComponent, error) {
 			return nil, fmt.Errorf("error")
 		})
-		ComponentHub.CreateComponent("error-0", "", "1111")
+		ComponentHub.CreateComponent("error-0", "", "", "1111")
 
 		ComponentHub.UnregisterFactory("*", "xxx")
 	}
