@@ -83,7 +83,7 @@ type FireGame struct {
 
 func NewGame() (game *FireGame) {
 	game = &FireGame{
-		NetworkComponent: network.NewNetworkComponent("", "group-0", "group-0"),
+		NetworkComponent: network.NewNetworkComponent("", "group-0", "", "group-0"),
 		Width:            1280,
 		Height:           720,
 		weaponColors:     []int{0xFFFF4B91, 0xFFFFCD4B, 0xFFD6D46D, 0xFFF4DFB6, 0xFFDE8F5F, 0xFF9A4444},
@@ -146,10 +146,9 @@ func (g *FireGame) onPlayerJoin(ctx network.NetworkSession, _ string, name strin
 		return
 	}
 	ctx.SetGroup(g.Group)
-	player := NewPlayer(g, uuid.New())
+	player := NewPlayer(g, owner, uuid.New())
 	player.Position = g.seatPosition[seat]
 	player.SetName(name)
-	player.Owner = owner
 	player.SetSeat(seat)
 	g.playerAll[owner] = player
 	network.Infof("Game(%v) player %v/%v join game on %v", player.Group, owner, name, g.Group)
@@ -222,7 +221,7 @@ type Boss struct {
 
 func NewBoss(game *FireGame, cid string) (boss *Boss) {
 	boss = &Boss{
-		NetworkComponent: network.NewNetworkComponent(FactoryTypeBoss, game.Group, cid),
+		NetworkComponent: network.NewNetworkComponent(FactoryTypeBoss, game.Group, "", cid),
 		Game:             game,
 		Position:         Vec{0, 0},
 		Radius:           160,
@@ -275,7 +274,7 @@ type Bullet struct {
 
 func NewBullet(game *FireGame, playerID string, cid string, power int) (bullet *Bullet) {
 	bullet = &Bullet{
-		NetworkComponent: network.NewNetworkComponent(FactoryTypeBullet, game.Group, cid),
+		NetworkComponent: network.NewNetworkComponent(FactoryTypeBullet, game.Group, "", cid),
 		Game:             game,
 		PlayerID:         playerID,
 		Position:         Vec{0, 0},
@@ -366,9 +365,9 @@ type Player struct {
 	WeaponDirect Vec
 }
 
-func NewPlayer(game *FireGame, cid string) (player *Player) {
+func NewPlayer(game *FireGame, owner, cid string) (player *Player) {
 	player = &Player{
-		NetworkComponent: network.NewNetworkComponent(FactoryTypePlayer, game.Group, cid),
+		NetworkComponent: network.NewNetworkComponent(FactoryTypePlayer, game.Group, owner, cid),
 		Game:             game,
 	}
 	player.Refer = player

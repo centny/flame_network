@@ -112,9 +112,8 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
       return "Seat Full";
     }
     ctx.group = nGroup;
-    var player = Player(group: nGroup, cid: const Uuid().v1())
+    var player = Player(group: nGroup, owner: owner, cid: const Uuid().v1())
       ..nName.value = name
-      ..nOwner = owner
       ..nSeat.value = seat;
     players[owner] = player;
     world.add(player);
@@ -150,11 +149,11 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     }
   }
 
-  NetworkComponent onNetworkCreate(String key, String group, String id) {
+  NetworkComponent onNetworkCreate(String key, String group, String owner, String id) {
     L.i("Game($group) network create $key by $id");
     switch (key) {
       case FactoryType.player:
-        var player = Player(group: group, cid: id);
+        var player = Player(group: group, owner: owner, cid: id);
         world.add(player);
         return player;
       case FactoryType.bullet:
@@ -415,10 +414,14 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
   static List<int> weaponColors = [0xFFFF4B91, 0xFFFFCD4B, 0xFFD6D46D, 0xFFF4DFB6, 0xFFDE8F5F, 0xFF9A4444];
 
   String group;
+  String owner;
   String cid;
 
   @override
   String get nGroup => group;
+
+  @override
+  String get nOwner => owner;
 
   @override
   String get nCID => cid;
@@ -442,7 +445,7 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
   final NetworkCall<void, NetworkVector2> nFire = NetworkCall("fire", argNew: NetworkVector2.zero);
   final NetworkCall<void, int> nSwitch = NetworkCall("switch");
 
-  Player({required this.group, required this.cid}) {
+  Player({required this.group, required this.owner, required this.cid}) {
     registerNetworkProp(nName);
     registerNetworkProp(nSeat, setter: (v) => syncSeat(false));
     registerNetworkProp(nWeaponUsing, setter: (v) => weaponView.paint.color = Color(weaponColors[v]));
