@@ -512,6 +512,7 @@ type NetworkComponent struct {
 	Owner           string
 	CID             string
 	Removed         bool
+	Resync          bool
 	OnNetworkRemove func()
 	OnPropUpdate    map[string]NetworkPropUpdate
 	Refer           interface{}
@@ -1049,12 +1050,14 @@ func (n *NetworkComponentHub) SyncRecv(group string, components []*NetworkSyncDa
 				break
 			}
 		}
+		component.Resync = whole
 		if len(c.Props) > 0 {
 			component.RecvNetworkProp(c.Props)
 		}
 		if len(c.Triggers) > 0 {
 			component.RecvNetworkTrigger(c.Triggers)
 		}
+		component.Resync = false
 	}
 	if whole {
 		for _, c := range n.listNotInComponent(cidAll) {

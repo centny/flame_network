@@ -501,6 +501,7 @@ mixin NetworkComponent {
   static final Map<String, Map<String, NetworkComponent>> _componentGroup = {};
   bool _propUpdated = true; //default is updated to sync
   bool _triggerUpdated = true; //default is not trigger
+  bool _resync = false; //if whole prop resync
   final Map<String, NetworkProp<dynamic>> _props = {};
   final Map<String, NetworkTrigger<dynamic>> _triggers = {};
   final Map<String, NetworkCall<dynamic, dynamic>> _calls = {};
@@ -514,6 +515,7 @@ mixin NetworkComponent {
   bool get isServer => NetworkManager.global.isServer;
   bool get isClient => NetworkManager.global.isClient;
   bool get isOwner => nOwner == NetworkManager.global.user;
+  bool get isResync => _resync;
 
   //--------------------------//
   //------ NetworkComponent -------//
@@ -743,18 +745,21 @@ mixin NetworkComponent {
       var component = findComponent(c.nCID);
       if (c.nRemoved ?? false) {
         if (component != null) {
+          component._resync = whole ?? false;
           _removeComponent(component);
         }
         continue;
       }
       cidAll.add(c.nCID);
       component ??= createComponent(c.nFactory, group, c.nOwner, c.nCID);
+      component._resync = whole ?? false;
       if (c.nProps?.isNotEmpty ?? false) {
         component.recvNetworkProp(c.nProps ?? {});
       }
       if (c.nTriggers?.isNotEmpty ?? false) {
         component.recvNetworkTrigger(c.nTriggers ?? {});
       }
+      component._resync = false;
     }
     if (whole ?? false) {
       var componentRemove = [];

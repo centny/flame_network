@@ -446,6 +446,8 @@ void main() {
     L.i("props is $props");
     nc.recvNetworkProp(props);
 
+    assert(!nc.isResync);
+
     nc.recvNetworkProp({"none": 1});
 
     try {
