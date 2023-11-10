@@ -387,7 +387,8 @@ func (n *NetworkServerGRPC) RemoteCall(ctx context.Context, arg *grpc.CallArg) (
 
 func (n *NetworkServerGRPC) RemotePing(ctx context.Context, arg *grpc.PingArg) (result *grpc.PingResult, err error) {
 	session := NewNetworkSessionFromGRPC(ctx)
-	n.keepSession(session)
+	conn := n.keepSession(session)
+	n.callback.OnNetworkPing(conn, 0)
 	result = &grpc.PingResult{
 		Id:         arg.Id,
 		ServerTime: xtime.Now(),

@@ -116,7 +116,7 @@ type NetworkConnection interface {
 type NetworkConnectionSet map[string]NetworkConnection
 
 type NetworkCallback interface {
-	OnNetworkState(all NetworkConnectionSet, conn NetworkConnection, state NetworkState, info interface{})
+	NetworkEvent
 	OnNetworkCall(conn NetworkConnection, arg *NetworkCallArg) (ret *NetworkCallResult, err error)
 	OnNetworkSync(conn NetworkConnection, data *NetworkSyncData)
 }
