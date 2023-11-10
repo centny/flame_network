@@ -499,13 +499,17 @@ mixin NetworkComponent {
   static final Map<String, NetworkComponentFactory> _factoryAll = {};
   static final Map<String, NetworkComponent> _componentAll = {};
   static final Map<String, Map<String, NetworkComponent>> _componentGroup = {};
+  static const String netCreator = "net";
+  static const String locCreator = "loc";
   bool _propUpdated = true; //default is updated to sync
   bool _triggerUpdated = true; //default is not trigger
   bool _resync = false; //if whole prop resync
+  String _creator = locCreator;
   final Map<String, NetworkProp<dynamic>> _props = {};
   final Map<String, NetworkTrigger<dynamic>> _triggers = {};
   final Map<String, NetworkCall<dynamic, dynamic>> _calls = {};
 
+  String get nCreator => _creator;
   String get nFactory;
   String get nGroup => "";
   String get nOwner => "";
@@ -751,7 +755,7 @@ mixin NetworkComponent {
         continue;
       }
       cidAll.add(c.nCID);
-      component ??= createComponent(c.nFactory, group, c.nOwner, c.nCID);
+      component ??= createComponent(c.nFactory, group, c.nOwner, c.nCID).._creator = netCreator;
       component._resync = whole ?? false;
       if (c.nProps?.isNotEmpty ?? false) {
         component.recvNetworkProp(c.nProps ?? {});
@@ -764,7 +768,7 @@ mixin NetworkComponent {
     if (whole ?? false) {
       var componentRemove = [];
       _componentAll.forEach((cid, c) {
-        if (!cidAll.contains(cid)) {
+        if (c.nCreator == NetworkComponent.netCreator && !cidAll.contains(cid)) {
           componentRemove.add(c);
         }
       });

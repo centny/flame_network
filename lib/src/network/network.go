@@ -505,8 +505,14 @@ func (n *networkTriggerItem) Recv(vals ...interface{}) (err error) {
 	return
 }
 
+const (
+	LocCreator = "loc"
+	NetCreator = "net"
+)
+
 type NetworkComponent struct {
 	*xmap.SafeM
+	Creator         string
 	Factory         string
 	Group           string
 	Owner           string
@@ -523,6 +529,7 @@ type NetworkComponent struct {
 
 func NewNetworkComponent(factory, group, owner, cid string) (c *NetworkComponent) {
 	c = &NetworkComponent{
+		Creator:      LocCreator,
 		Factory:      factory,
 		Group:        group,
 		Owner:        owner,
@@ -1049,6 +1056,7 @@ func (n *NetworkComponentHub) SyncRecv(group string, components []*NetworkSyncDa
 			if err != nil {
 				break
 			}
+			component.Creator = NetCreator
 		}
 		component.Resync = whole
 		if len(c.Props) > 0 {
@@ -1061,7 +1069,9 @@ func (n *NetworkComponentHub) SyncRecv(group string, components []*NetworkSyncDa
 	}
 	if whole {
 		for _, c := range n.listNotInComponent(cidAll) {
-			n.removeComponent(c)
+			if c.Creator == NetCreator {
+				n.removeComponent(c)
+			}
 		}
 	}
 	return

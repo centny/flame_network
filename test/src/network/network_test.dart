@@ -42,6 +42,8 @@ class TestNetworkComponent with NetworkComponent, NetworkEvent {
   String cid = "123";
   String owner = "";
   @override
+  String get nCreator => NetworkComponent.netCreator;
+  @override
   String get nOwner => owner;
   @override
   String get nFactory => "test";
@@ -469,6 +471,7 @@ void main() {
     var cb = TestNetworkManager();
 
     var nc0 = TestNetworkComponent();
+    assert(nc0.nCreator == NetworkComponent.netCreator);
     cb.sync("*");
     nc0.unregister();
 
@@ -550,5 +553,6 @@ void main() {
     var cb = TestNetworkManager();
     cb.onNetworkState(HashSet.from([conn]), conn, NetworkState.ready);
     await conn.close();
+    assert(TestNetworkErr().nCreator == NetworkComponent.locCreator);
   });
 }

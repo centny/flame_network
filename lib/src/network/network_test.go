@@ -285,6 +285,7 @@ func TestNetwork(t *testing.T) {
 		nc.Unregister()
 
 		nc = NewTestNetworkComponent()
+		nc.Creator = NetCreator
 		ComponentHub.SyncRecv("*", nil, true)
 		cs = ComponentHub.SyncSend("*", true)
 		if len(cs) != 0 {
