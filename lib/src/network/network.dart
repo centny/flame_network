@@ -157,7 +157,8 @@ class NetworkSyncDataComponent {
     return triggerAll;
   }
 
-  static Map<String, List<dynamic>> decodeTrigger(Map<String, List<dynamic>>? triggers) => triggers?.map((key, value) => MapEntry(key, value.map((e) => jsonDecode(e)).toList())) ?? {};
+  static Map<String, List<dynamic>> decodeTrigger(Map<String, List<dynamic>>? triggers) =>
+      triggers?.map((key, value) => MapEntry(key, value.map((e) => jsonDecode(e)).toList())) ?? {};
 
   NetworkSyncDataComponent encode(NetworkSession session) => NetworkSyncDataComponent(
         nFactory: nFactory,
@@ -189,9 +190,11 @@ class NetworkSyncData {
 
   NetworkSyncData({required this.uuid, required this.group, this.whole, required this.components});
 
-  factory NetworkSyncData.create({List<NetworkSyncDataComponent>? components, bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: "*", whole: whole, components: components ?? List.empty(growable: true));
+  factory NetworkSyncData.create({List<NetworkSyncDataComponent>? components, bool? whole}) =>
+      NetworkSyncData(uuid: const Uuid().v1(), group: "*", whole: whole, components: components ?? List.empty(growable: true));
 
-  factory NetworkSyncData.syncSend(String group, {bool? whole}) => NetworkSyncData(uuid: const Uuid().v1(), group: group, whole: whole, components: NetworkComponent.syncSend(group, whole: whole));
+  factory NetworkSyncData.syncSend(String group, {bool? whole}) =>
+      NetworkSyncData(uuid: const Uuid().v1(), group: group, whole: whole, components: NetworkComponent.syncSend(group, whole: whole));
 }
 
 abstract class NetworkManager with NetworkTransport, NetworkCallback {
@@ -665,7 +668,8 @@ mixin NetworkComponent {
   //--------------------------//
   //------ NetworkTrigger -------//
 
-  void registerNetworkTrigger<T>(NetworkTrigger<T> trigger, void Function(T)? recv, {void Function()? done, void Function(dynamic)? error, NetworkValue Function()? valNew}) {
+  void registerNetworkTrigger<T>(NetworkTrigger<T> trigger, void Function(T)? recv,
+      {void Function()? done, void Function(dynamic)? error, NetworkValue Function()? valNew}) {
     if (_triggers.containsKey(trigger.name)) {
       throw Exception("NetworkTrigger ${trigger.name} is registered");
     }
