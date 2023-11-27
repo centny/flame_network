@@ -108,6 +108,8 @@ mixin NetworkEvent {
 
   Future<void> onNetworkPing(NetworkConnection conn, Duration ping) async {}
 
+  Future<void> onNetworkDataSynced(NetworkConnection conn, NetworkSyncData data) async {}
+
   void unregisterFromNetworkManager() => NetworkManager.global.unregisterNetworkEvent(this);
 }
 
@@ -266,7 +268,20 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
 
   @override
   @mustCallSuper
-  Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async => NetworkComponent.syncRecv(data.group, data.components, whole: data.whole);
+  Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async {
+    NetworkComponent.syncRecv(data.group, data.components, whole: data.whole);
+    var group = conn.session.group ?? "";
+    await Future.forEach(_events.keys.toList(), (event) async {
+      var g = _events[event];
+      if (g == group || g == "*") {
+        try {
+          await event.onNetworkDataSynced(conn, data);
+        } catch (e, s) {
+          L.e("NetworkManager call network data synced on group $g throw error $e\n$s");
+        }
+      }
+    });
+  }
 
   Future<void> onNetworkPing(NetworkConnection conn, Duration ping) async {
     var group = conn.session.group ?? "";
@@ -665,6 +680,8 @@ mixin NetworkComponent {
     }
   }
 
+  void onNetworkSynced() async {}
+
   //--------------------------//
   //------ NetworkTrigger -------//
 
@@ -749,6 +766,7 @@ mixin NetworkComponent {
 
   static void syncRecv(String group, List<NetworkSyncDataComponent> components, {bool? whole}) {
     var cidAll = HashSet<String>();
+    List<NetworkComponent> componentSynced = [];
     for (var c in components) {
       var component = findComponent(c.nCID);
       if (c.nRemoved ?? false) {
@@ -768,6 +786,7 @@ mixin NetworkComponent {
         component.recvNetworkTrigger(c.nTriggers ?? {});
       }
       component._resync = false;
+      componentSynced.add(component);
     }
     if (whole ?? false) {
       var componentRemove = [];
@@ -779,6 +798,9 @@ mixin NetworkComponent {
       for (var c in componentRemove) {
         _removeComponent(c);
       }
+    }
+    for (var c in componentSynced) {
+      c.onNetworkSynced();
     }
   }
 

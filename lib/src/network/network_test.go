@@ -57,6 +57,7 @@ func NewTestNetworkComponent() (c *TestNetworkComponent) {
 	c.RegisterNetworkCall("e1", c.onErr1)
 	c.RegisterNetworkEvent("test", c)
 	c.OnNetworkRemove = c.Unregister
+	c.OnNetworkSynced = func() {}
 	return
 }
 
@@ -116,6 +117,10 @@ func (t *TestNetworkComponent) OnNetworkState(all NetworkConnectionSet, conn Net
 }
 
 func (t *TestNetworkComponent) OnNetworkPing(conn NetworkConnection, ping time.Duration) {
+}
+
+func (t *TestNetworkComponent) OnNetworkDataSynced(conn NetworkConnection, data *NetworkSyncData) {
+
 }
 
 func (t *TestNetworkComponent) Unregister() {

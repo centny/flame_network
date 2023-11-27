@@ -134,6 +134,7 @@ type NetworkTransport interface {
 type NetworkEvent interface {
 	OnNetworkState(all NetworkConnectionSet, conn NetworkConnection, state NetworkState, info interface{})
 	OnNetworkPing(conn NetworkConnection, ping time.Duration)
+	OnNetworkDataSynced(conn NetworkConnection, data *NetworkSyncData)
 }
 
 func JsonEncode(v interface{}) string {
@@ -328,10 +329,15 @@ func (n *NetworkManager) OnNetworkCall(conn NetworkConnection, arg *NetworkCallA
 
 func (n *NetworkManager) OnNetworkSync(conn NetworkConnection, data *NetworkSyncData) {
 	ComponentHub.OnNetworkSync(conn, data)
+	n.OnNetworkDataSynced(conn, data)
 }
 
 func (n *NetworkManager) OnNetworkPing(conn NetworkConnection, ping time.Duration) {
 	EventHub.OnNetworkPing(conn, ping)
+}
+
+func (n *NetworkManager) OnNetworkDataSynced(conn NetworkConnection, data *NetworkSyncData) {
+	EventHub.OnNetworkDataSynced(conn, data)
 }
 
 type NetworkCallArg struct {
@@ -520,6 +526,7 @@ type NetworkComponent struct {
 	Removed         bool
 	Resync          bool
 	OnNetworkRemove func()
+	OnNetworkSynced func()
 	OnPropUpdate    map[string]NetworkPropUpdate
 	Refer           interface{}
 	propAll         *SyncMap
@@ -836,6 +843,17 @@ func (n *NetworkEventHub) OnNetworkPing(conn NetworkConnection, ping time.Durati
 	}
 }
 
+func (n *NetworkEventHub) OnNetworkDataSynced(conn NetworkConnection, data *NetworkSyncData) {
+	group := conn.Session().Group()
+	n.eventLck.RLock()
+	defer n.eventLck.RUnlock()
+	for event, g := range n.eventAll {
+		if g == group || g == "*" {
+			event.OnNetworkDataSynced(conn, data)
+		}
+	}
+}
+
 func (n *NetworkEventHub) RegisterNetworkEvent(group string, event NetworkEvent) {
 	n.eventLck.Lock()
 	defer n.eventLck.Unlock()
@@ -1042,6 +1060,7 @@ func (n *NetworkComponentHub) SyncSend(group string, whole bool) []*NetworkSyncD
 
 func (n *NetworkComponentHub) SyncRecv(group string, components []*NetworkSyncDataComponent, whole bool) (err error) {
 	cidAll := map[string]int{}
+	var componnetSynced []*NetworkComponent
 	for _, c := range components {
 		component := n.FindComponent(c.CID)
 		if c.Removed {
@@ -1066,6 +1085,9 @@ func (n *NetworkComponentHub) SyncRecv(group string, components []*NetworkSyncDa
 			component.RecvNetworkTrigger(c.Triggers)
 		}
 		component.Resync = false
+		if component.OnNetworkSynced != nil {
+			componnetSynced = append(componnetSynced, component)
+		}
 	}
 	if whole {
 		for _, c := range n.listNotInComponent(cidAll) {
@@ -1073,6 +1095,9 @@ func (n *NetworkComponentHub) SyncRecv(group string, components []*NetworkSyncDa
 				n.removeComponent(c)
 			}
 		}
+	}
+	for _, c := range componnetSynced {
+		c.OnNetworkSynced()
 	}
 	return
 }

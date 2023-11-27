@@ -205,6 +205,11 @@ class TestNetworkErr with NetworkComponent, NetworkEvent {
   Future<void> onNetworkPing(NetworkConnection conn, Duration ping) {
     throw Exception("ping error");
   }
+
+  @override
+  Future<void> onNetworkDataSynced(NetworkConnection conn, NetworkSyncData data) async {
+    throw Exception("synced error");
+  }
 }
 
 class TestNetworkConnection with NetworkConnection {
@@ -313,6 +318,9 @@ void main() {
     try {
       await m.onNetworkPing(m.conn, const Duration(seconds: 1));
     } catch (_) {}
+    try {
+      await m.onNetworkSync(m.conn, NetworkSyncData.syncSend("*"));
+    } catch (_) {}
     ne.unregister();
   });
   test('NetworkCall.call', () async {
@@ -340,11 +348,13 @@ void main() {
 
     //cover
     try {
-      await NetworkComponent.callNetworkCall(DefaultNetworkSession.create(), NetworkCallArg(uuid: const Uuid().v1(), nCID: "none", nName: nc.cUpdate.name, nArg: "100"));
+      await NetworkComponent.callNetworkCall(
+          DefaultNetworkSession.create(), NetworkCallArg(uuid: const Uuid().v1(), nCID: "none", nName: nc.cUpdate.name, nArg: "100"));
       assert(false); //not reach
     } catch (_) {}
     try {
-      await NetworkComponent.callNetworkCall(DefaultNetworkSession.create(), NetworkCallArg(uuid: const Uuid().v1(), nCID: nc.nCID, nName: "none", nArg: "100"));
+      await NetworkComponent.callNetworkCall(
+          DefaultNetworkSession.create(), NetworkCallArg(uuid: const Uuid().v1(), nCID: nc.nCID, nName: "none", nArg: "100"));
       assert(false); //not reach
     } catch (_) {}
 
