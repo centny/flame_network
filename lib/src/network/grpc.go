@@ -176,8 +176,12 @@ func NewNetworkSyncStreamGRPC(conn *NetworkBaseConnGRPC, stream grpc.Server_Remo
 }
 
 func (n *NetworkSyncStreamGRPC) Wait() (err error) {
-	m := <-n.closer
-	err = fmt.Errorf(m)
+	select {
+	case <-n.stream.Context().Done():
+		err = fmt.Errorf("closed")
+	case m := <-n.closer:
+		err = fmt.Errorf(m)
+	}
 	return
 }
 
