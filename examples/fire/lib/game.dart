@@ -42,6 +42,13 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   bool autoZoom = true;
 
   final TextComponent _pingShow = TextComponent(text: "-");
+  final TextBoxComponent _reconnectShow = TextBoxComponent(
+    anchor: Anchor.center,
+    align: Anchor.center,
+    text: "connection loss, auto reconnecting...",
+    size: Vector2(600, 20),
+    textRenderer: TextPaint(style: const TextStyle(color: Colors.yellow, fontSize: 16)),
+  );
 
   FireGame({World? world, bool? autoZoom})
       : autoZoom = autoZoom ?? true,
@@ -126,6 +133,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     if (isClient) {
       var res = await networkCall(nJoin, name);
       if (res == "OK") {
+        NetworkManager.global.session.group = nGroup;
         NetworkManager.global.session.user = name;
         await NetworkManager.global.ready(); //read to sync
       }
@@ -147,11 +155,22 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   @override
   Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
     await super.onNetworkState(all, conn, state, info: info);
-    L.i("Game($nGroup) 1/${all.length} connect state to $state");
+    var user = conn.session.user ?? "";
+    L.i("Game($nGroup) $user 1/${all.length} connect state to $state");
+  }
+
+  @override
+  Future<void> onNetworkUserConnected(NetworkConnection conn, String user, {Object? info}) async {
+    L.i("Game($nGroup) user $user connection is connect by $info");
+    await super.onNetworkUserConnected(conn, user, info: info);
+    if (isClient) {
+      camera.viewport.remove(_reconnectShow);
+    }
   }
 
   @override
   Future<void> onNetworkUserDisconnected(NetworkConnection conn, String user, {Object? info}) async {
+    L.i("Game($nGroup) user $user connection is disconnected by $info");
     if (isServer) {
       var player = players.remove(user);
       if (player != null) {
@@ -159,6 +178,9 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
         player.removeFromParent();
         releaseSeat(player.nSeat.value);
       }
+    }
+    if (isClient) {
+      camera.viewport.add(_reconnectShow);
     }
   }
 
@@ -194,6 +216,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     camera.viewport.add(FpsTextComponent());
     _pingShow.position = Vector2(8, camera.visibleWorldRect.height - 30);
     camera.viewport.add(_pingShow);
+    _reconnectShow.position = Vector2(camera.visibleWorldRect.width / 2, camera.visibleWorldRect.height / 2);
 
     initSeat();
 

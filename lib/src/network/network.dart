@@ -97,7 +97,7 @@ mixin NetworkEvent {
     if (user.isNotEmpty && state == NetworkState.ready && all.length == 1) {
       await onNetworkUserConnected(conn, user, info: info);
     }
-    if (user.isNotEmpty && (state == NetworkState.closed || state == NetworkState.error) && all.isEmpty) {
+    if (user.isNotEmpty && (state == NetworkState.closed || state == NetworkState.error) && (all.isEmpty || (all.length == 1 && all.contains(conn)))) {
       await onNetworkUserDisconnected(conn, user, info: info);
     }
   }
