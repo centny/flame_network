@@ -171,6 +171,7 @@ func (g *FireGame) OnNetworkState(all network.NetworkConnectionSet, conn network
 		owner := conn.Session().User()
 		player := g.playerAll[owner]
 		if player != nil {
+			player.Removed = true
 			delete(g.playerAll, owner)
 			seat := player.IntDef(0, "seat")
 			name := player.StrDef("", "name")
