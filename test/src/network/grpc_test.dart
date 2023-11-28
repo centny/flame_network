@@ -206,8 +206,13 @@ void main() {
     var res1 = await http.get(Uri.parse("http://127.0.0.1:53052/none.txt"));
     assert(res1.statusCode == 404);
     var res2 = await http.get(Uri.parse("http://127.0.0.1:53052/README.md"));
-    assert(res2.statusCode == 200);
+    assert(res2.statusCode == 200, res2.body);
     await NetworkManagerGRPC.shared.stop();
+
+    NetworkManagerGRPC.shared.webDir = "none";
+    await NetworkManagerGRPC.shared.start();
+    await NetworkManagerGRPC.shared.stop();
+
     NetworkManagerGRPC.shared.grpcOn = !kIsWeb;
     NetworkManagerGRPC.shared.webDir = null;
     NetworkManagerGRPC.shared.webAddress = Uri(scheme: "ws", host: "127.0.0.1", port: 51052);

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 pkg_ver=`git rev-parse --abbrev-ref HEAD`
 

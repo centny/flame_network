@@ -41,6 +41,7 @@ void main() async {
     L.i("FireGame is starting by grpc:$grpcAddr,web:$webAddr");
     NetworkManagerGRPC.shared.grpcAddress = Uri.parse(grpcAddr);
     NetworkManagerGRPC.shared.webAddress = Uri.parse(webAddr);
+    NetworkManagerGRPC.shared.webDir = "www";
     NetworkManagerGRPC.shared.isClient = false;
     NetworkManagerGRPC.shared.isServer = true;
     WidgetsFlutterBinding.ensureInitialized();
@@ -77,6 +78,7 @@ void main() async {
   L.i("FireGame is starting by grpc:$grpcAddr,web:$webAddr");
   NetworkManagerGRPC.shared.grpcAddress = Uri.parse(grpcAddr);
   NetworkManagerGRPC.shared.webAddress = Uri.parse(webAddr);
+  NetworkManagerGRPC.shared.webDir = "www";
   switch (mode) {
     case "server":
       NetworkManagerGRPC.shared.isClient = false;

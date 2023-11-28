@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 pkg_ver=`git rev-parse --abbrev-ref HEAD`
 flutter_ver=3.16.1

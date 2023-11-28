@@ -14,6 +14,7 @@ import 'package:http2/transport.dart';
 import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import './grpc_io.dart' if (dart.library.html) 'grpc_web.dart';
 import '../common/log.dart';
 
 RequestID newRequestID() => RequestID(uuid: const Uuid().v1());
@@ -516,18 +517,10 @@ class HandledServerGRPC extends Server {
     } else {
       _webServer = await HttpServer.bind(address, port ?? 80);
     }
+    var dirHandler = WebHandler(dir);
     _webServer!.listen((request) async {
       if (path != null && request.uri.path != path) {
-        if (dir != null && request.method == "GET") {
-          final String filePath = request.uri.path.endsWith("/") ? '${request.uri.path}/index.html' : request.uri.path;
-          final File file = File("$dir/$filePath");
-          if (await file.exists()) {
-            return await file.openRead().pipe(request.response);
-          }
-        }
-        request.response.statusCode = 404;
-        request.response.write('Not found');
-        request.response.close();
+        await dirHandler.handle(request);
         return;
       }
       L.i("[WEB] receive request ${request.uri} from ${request.connectionInfo?.remoteAddress.address}:${request.connectionInfo?.remotePort}");
