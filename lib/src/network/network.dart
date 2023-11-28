@@ -240,6 +240,16 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
     return updated;
   }
 
+  List<NetworkEvent> matchNetworkEvent(String group) {
+    List<NetworkEvent> matched = [];
+    _events.forEach((e, g) {
+      if (g == group || g == "*") {
+        matched.add(e);
+      }
+    });
+    return matched;
+  }
+
   @override
   @mustCallSuper
   Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
@@ -250,14 +260,11 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
         await conn.networkSync(data);
       }
     }
-    await Future.forEach(_events.keys, (event) async {
-      var g = _events[event];
-      if (g == group || g == "*") {
-        try {
-          await event.onNetworkState(all, conn, state, info: info);
-        } catch (e, s) {
-          L.e("NetworkManager call network event on group $g throw error $e\n$s");
-        }
+    await Future.forEach(matchNetworkEvent(group), (event) async {
+      try {
+        await event.onNetworkState(all, conn, state, info: info);
+      } catch (e, s) {
+        L.e("NetworkManager call network event on $event throw error $e\n$s");
       }
     });
   }
@@ -271,28 +278,22 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
   Future<void> onNetworkSync(NetworkConnection conn, NetworkSyncData data) async {
     NetworkComponent.syncRecv(data.group, data.components, whole: data.whole);
     var group = conn.session.group ?? "";
-    await Future.forEach(_events.keys.toList(), (event) async {
-      var g = _events[event];
-      if (g == group || g == "*") {
-        try {
-          await event.onNetworkDataSynced(conn, data);
-        } catch (e, s) {
-          L.e("NetworkManager call network data synced on group $g throw error $e\n$s");
-        }
+    await Future.forEach(matchNetworkEvent(group), (event) async {
+      try {
+        await event.onNetworkDataSynced(conn, data);
+      } catch (e, s) {
+        L.e("NetworkManager call network data synced on $event throw error $e\n$s");
       }
     });
   }
 
   Future<void> onNetworkPing(NetworkConnection conn, Duration ping) async {
     var group = conn.session.group ?? "";
-    await Future.forEach(_events.keys, (event) async {
-      var g = _events[event];
-      if (g == group || g == "*") {
-        try {
-          await event.onNetworkPing(conn, ping);
-        } catch (e, s) {
-          L.e("NetworkManager call network ping on group $g throw error $e\n$s");
-        }
+    await Future.forEach(matchNetworkEvent(group), (event) async {
+      try {
+        await event.onNetworkPing(conn, ping);
+      } catch (e, s) {
+        L.e("NetworkManager call network ping on $event throw error $e\n$s");
       }
     });
   }
