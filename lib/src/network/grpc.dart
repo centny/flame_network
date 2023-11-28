@@ -505,6 +505,8 @@ class HandledServerGRPC extends Server {
   Future<void> web({
     dynamic address,
     int? port,
+    String? path,
+    String? dir,
     ServerCredentials? security,
     ServerSettings? http2ServerSettings,
   }) async {
@@ -515,6 +517,19 @@ class HandledServerGRPC extends Server {
       _webServer = await HttpServer.bind(address, port ?? 80);
     }
     _webServer!.listen((request) async {
+      if (path != null && request.uri.path != path) {
+        if (dir != null && request.method == "GET") {
+          final String filePath = request.uri.path.endsWith("/") ? '${request.uri.path}/index.html' : request.uri.path;
+          final File file = File("$dir/$filePath");
+          if (await file.exists()) {
+            return await file.openRead().pipe(request.response);
+          }
+        }
+        request.response.statusCode = 404;
+        request.response.write('Not found');
+        request.response.close();
+        return;
+      }
       L.i("[WEB] receive request ${request.uri} from ${request.connectionInfo?.remoteAddress.address}:${request.connectionInfo?.remotePort}");
       request.response.headers.contentType = ContentType.binary;
       var socket = await WebSocketTransformer.upgrade(request);
@@ -578,6 +593,7 @@ class NetworkManagerGRPC extends NetworkManager {
   bool webOn = true;
   Uri grpcAddress = Uri(scheme: "grpc", host: "127.0.0.1", port: 50051);
   Uri webAddress = Uri(scheme: "ws", host: "127.0.0.1", port: 50052);
+  String? webDir;
   ServerCredentials? security;
   //
   ChannelCredentials credentials = const ChannelCredentials.insecure();
@@ -617,11 +633,21 @@ class NetworkManagerGRPC extends NetworkManager {
     );
     if (grpcOn) {
       L.i("[GRPC] start grpc server on $grpcAddress");
-      await server?.serve(address: grpcAddress.host, port: grpcAddress.port, security: security);
+      await server?.serve(
+        address: grpcAddress.host,
+        port: grpcAddress.port,
+        security: security,
+      );
     }
     if (webOn) {
       L.i("[GRPC] start web server on $webAddress");
-      await server?.web(address: webAddress.host, port: webAddress.port, security: security);
+      await server?.web(
+        address: webAddress.host,
+        port: webAddress.port,
+        path: webAddress.path.isEmpty ? null : webAddress.path,
+        dir: webDir,
+        security: security,
+      );
     }
   }
 

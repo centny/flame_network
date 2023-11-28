@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flame_network/flame_network.dart';
 import 'package:grpc/grpc.dart';
+import 'package:http/http.dart' as http;
 
 class TestNetworkComponent with NetworkComponent, NetworkEvent {
   bool removed = false;
@@ -191,6 +192,25 @@ void main() {
     await NetworkManagerGRPC.shared.stop();
     NetworkManagerGRPC.shared.grpcOn = !kIsWeb;
     nc.unregister();
+  });
+  test('NetworkGRPC.www', () async {
+    var callback = TestNetworkCallback();
+    NetworkManagerGRPC.shared.verbose = true;
+    NetworkManagerGRPC.shared.isServer = true;
+    NetworkManagerGRPC.shared.isClient = true;
+    NetworkManagerGRPC.shared.callback = callback;
+    NetworkManagerGRPC.shared.grpcOn = false;
+    NetworkManagerGRPC.shared.webDir = ".";
+    NetworkManagerGRPC.shared.webAddress = Uri(scheme: "ws", host: "127.0.0.1", port: 53052, path: "/ws/test");
+    await NetworkManagerGRPC.shared.start();
+    var res1 = await http.get(Uri.parse("http://127.0.0.1:53052/none.txt"));
+    assert(res1.statusCode == 404);
+    var res2 = await http.get(Uri.parse("http://127.0.0.1:53052/README.md"));
+    assert(res2.statusCode == 200);
+    await NetworkManagerGRPC.shared.stop();
+    NetworkManagerGRPC.shared.grpcOn = !kIsWeb;
+    NetworkManagerGRPC.shared.webDir = null;
+    NetworkManagerGRPC.shared.webAddress = Uri(scheme: "ws", host: "127.0.0.1", port: 51052);
   });
   test('NetworkGRPC.call', () async {
     var callback = TestNetworkCallback();
