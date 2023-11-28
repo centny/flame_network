@@ -684,7 +684,7 @@ func NewNetworkTransportGRPC() (transport *NetworkTransportGRPC) {
 	transport.GrpcServer = ggrpc.NewServer()
 	transport.WebMux = http.NewServeMux()
 	transport.Websocket = NewNetworkWebsocketServerGRPC()
-	transport.WebServer = &http.Server{Handler: transport.Websocket}
+	transport.WebServer = &http.Server{Handler: transport.WebMux}
 	grpc.RegisterServerServer(transport.GrpcServer, transport.Server)
 	return
 }
