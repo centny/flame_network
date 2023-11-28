@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 if [ "$1" == "go" ];then
     go build -v .

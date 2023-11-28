@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$FLUTTER_ROOT" == "" ];then
+    echo "FLUTTER_ROOT is not setted"
+    exit 1
+fi
+
 pkg_ver=`git rev-parse --abbrev-ref HEAD`
 
 if [ "$1" == "docker" ];then
@@ -10,6 +15,7 @@ if [ "$1" == "docker" ];then
 
     docker build -t fire-dart:$pkg_ver -f examples/fire/DockerfileDart .
 else
+    mkdir -p build/server
     flutter build bundle
     cp -rf build/flutter_assets build/server/assets
     dart $FLUTTER_ROOT/bin/cache/dart-sdk/bin/snapshots/frontend_server.dart.snapshot \
