@@ -30,13 +30,6 @@ void main() async {
     var webAddr = environment("WEB_ADDR");
     if (webAddr.isEmpty) {
       webAddr = "ws://0.0.0.0:50052/ws/fire";
-      if (kIsWeb) {
-        if (Uri.base.scheme == "https") {
-          webAddr = "wss://${Uri.base.host}:${Uri.base.port}/ws/fire";
-        } else {
-          webAddr = "ws://${Uri.base.host}:${Uri.base.port}/ws/fire";
-        }
-      }
     }
     L.i("FireGame is starting by grpc:$grpcAddr,web:$webAddr");
     NetworkManagerGRPC.shared.grpcAddress = Uri.parse(grpcAddr);
@@ -67,7 +60,7 @@ void main() async {
   var webAddr = environment("WEB_ADDR");
   if (webAddr.isEmpty) {
     webAddr = "ws://127.0.0.1:50052/ws/fire";
-    if (kIsWeb) {
+    if (kIsWeb && kReleaseMode) {
       if (Uri.base.scheme == "https") {
         webAddr = "wss://${Uri.base.host}:${Uri.base.port}/ws/fire";
       } else {
