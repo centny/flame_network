@@ -240,7 +240,9 @@ func (n *NetworkServerGRPC) keepSession(session NetworkSession) *NetworkBaseConn
 			isServer: true,
 			isClient: true,
 		}
-		n.sessionAll[sid] = having
+		if len(sid) > 0 {
+			n.sessionAll[sid] = having
+		}
 	}
 	having.session.SetLast(time.Now())
 	having.session.SetMeta(session.Meta()) //only update meta

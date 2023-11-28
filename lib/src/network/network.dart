@@ -44,7 +44,7 @@ class DefaultNetworkSession with NetworkSession {
 
   DefaultNetworkSession(this._meta, this._context);
 
-  factory DefaultNetworkSession.create() => DefaultNetworkSession({}, {});
+  factory DefaultNetworkSession.create() => DefaultNetworkSession({"key": const Uuid().v1()}, {});
 
   factory DefaultNetworkSession.meta(Map<String, String> meta) => DefaultNetworkSession(meta, {});
 

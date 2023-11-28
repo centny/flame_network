@@ -178,7 +178,9 @@ class NetworkServerGRPC extends ServerServiceBase {
     var having = _sessionAll[session.key];
     if (having == null) {
       having = NetworkServerConnGRPC(state: NetworkState.ready, meta: session.meta);
-      _sessionAll[session.key] = having;
+      if (session.key.isNotEmpty) {
+        _sessionAll[session.key] = having;
+      }
     }
     having.session.last = DateTime.now();
     return having;
