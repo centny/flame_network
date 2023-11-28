@@ -1,20 +1,20 @@
 #!/bin/bash
 
-if [ "$FLUTTER_ROOT" == "" ];then
-    echo "FLUTTER_ROOT is not setted"
-    exit 1
-fi
-
 pkg_ver=`git rev-parse --abbrev-ref HEAD`
+flutter_ver=3.16.1
 
 if [ "$1" == "docker" ];then
     cd `dirname ${0}`/../../
-    if [[ "$(docker images -q flutter:latest 2> /dev/null)" == "" ]]; then
-    docker build --build-arg=VER=3.13.8 -t flutter:latest -f examples/fire/DockerfileSDK .
+    if [[ "$(docker images -q flutter:$flutter_ver 2> /dev/null)" == "" ]]; then
+        docker build --build-arg=VER=$flutter_ver -t flutter:$flutter_ver -f examples/fire/DockerfileSDK .
     fi
 
     docker build -t fire-dart:$pkg_ver -f examples/fire/DockerfileDart .
 else
+    if [ "$FLUTTER_ROOT" == "" ];then
+        echo "FLUTTER_ROOT is not setted"
+        exit 1
+    fi
     mkdir -p build/server
     flutter build bundle
     cp -rf build/flutter_assets build/server/assets

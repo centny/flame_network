@@ -8,5 +8,6 @@ RUN apk add --no-cache tzdata libc6-compat
 ENV TZ Asia/Shanghai
 RUN apk add --no-cache ca-certificates
 COPY --from=0 /src/examples/fire/fire /app/fire
+ADD examples/fire/build/web/ /app/www/
 WORKDIR /app
 ENTRYPOINT ["/app/fire"]

@@ -711,7 +711,7 @@ class NetworkManagerGRPC extends NetworkManager {
     if (running) {
       return;
     }
-    L.i("[GRPC] network start by server:$isServer,client:$isClient");
+    L.i("[GRPC] network start by server:$isServer,client:$isClient,grpc:$grpcOn/$grpcAddress,web:$webOn/$webAddress");
     running = true;
     if (isServer && server == null) {
       await _listen();

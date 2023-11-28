@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"net/http"
 	"net/url"
 	"os"
 	"runtime"
@@ -20,7 +21,7 @@ func Main() {
 	}
 	webAddr := os.Getenv("WEB_ADDR")
 	if len(webAddr) < 1 {
-		webAddr = "ws://0.0.0.0:50052"
+		webAddr = "ws://0.0.0.0:50052/ws/fire"
 	}
 	network.Infof("server is starting by grpc:%v,web:%v", grpcAddr, webAddr)
 	transport := network.NewNetworkTransportGRPC()
@@ -32,6 +33,7 @@ func Main() {
 	if err != nil {
 		panic(err)
 	}
+	transport.WebMux.Handle("/", http.FileServer(http.Dir("www")))
 	network.Network.IsServer = true
 	network.Network.Transport = transport
 	err = network.Network.Start()
