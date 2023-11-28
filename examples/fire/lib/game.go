@@ -127,14 +127,14 @@ func (g *FireGame) releaseSeat(seat int) {
 }
 
 func (g *FireGame) onPlayerJoin(ctx network.NetworkSession, _ string, name string) (result string, err error) {
-	owner := ctx.User()
-	if len(owner) < 1 || len(name) < 1 {
-		err = fmt.Errorf("user/name is required")
+	if len(name) < 1 {
+		err = fmt.Errorf("name is required")
 		return
 	}
 	g.lock.Lock()
 	defer g.lock.Unlock()
 
+	owner := name
 	if g.playerAll[owner] != nil {
 		ctx.SetGroup(g.Group)
 		result = "OK"
@@ -146,6 +146,7 @@ func (g *FireGame) onPlayerJoin(ctx network.NetworkSession, _ string, name strin
 		return
 	}
 	ctx.SetGroup(g.Group)
+	ctx.SetUser(name)
 	player := NewPlayer(g, owner, uuid.New())
 	player.Position = g.seatPosition[seat]
 	player.SetName(name)
@@ -181,6 +182,10 @@ func (g *FireGame) OnNetworkState(all network.NetworkConnectionSet, conn network
 
 func (g *FireGame) OnNetworkPing(conn network.NetworkConnection, ping time.Duration) {
 
+}
+
+// OnNetworkDataSynced implements network.NetworkEvent.
+func (g *FireGame) OnNetworkDataSynced(conn network.NetworkConnection, data *network.NetworkSyncData) {
 }
 
 func (g *FireGame) RemoveObject(v interface{}) {

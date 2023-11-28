@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flame/game.dart';
 import 'package:flame_network/flame_network.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'log.dart';
@@ -8,6 +9,9 @@ import 'game.dart';
 import 'menu.dart';
 
 String environment(String key) {
+  if (kIsWeb) {
+    return "";
+  }
   var v = String.fromEnvironment(key);
   if (v.isEmpty) {
     v = Platform.environment[key] ?? "";

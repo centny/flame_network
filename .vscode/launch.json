@@ -22,7 +22,7 @@
             "flutterMode": "release"
         },
         {
-            "name": "fire",
+            "name": "fire (client)",
             "cwd": "examples/fire",
             "request": "launch",
             "type": "dart"
@@ -30,25 +30,11 @@
         {
             "name": "fire (server)",
             "cwd": "examples/fire",
-            "args": [
-                "--dart-define=MODE=server"
-            ],
+            "env": {
+                "MODE": "server"
+            },
             "request": "launch",
             "type": "dart"
-        },
-        {
-            "name": "fire (profile mode)",
-            "cwd": "examples/fire",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "profile"
-        },
-        {
-            "name": "fire (release mode)",
-            "cwd": "examples/fire",
-            "request": "launch",
-            "type": "dart",
-            "flutterMode": "release"
         }
     ]
 }

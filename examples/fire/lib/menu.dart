@@ -1,6 +1,5 @@
 import 'package:flame_network/flame_network.dart';
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 
 import 'game.dart';
 import 'log.dart';
@@ -45,15 +44,6 @@ class LoginMenuState extends State<LoginMenu> {
 
   void onStart() async {
     try {
-      if (NetworkManagerGRPC.shared.isClient) {
-        if (username.text.isEmpty) {
-          return;
-        }
-        NetworkManagerGRPC.shared.session.key = const Uuid().v1();
-        NetworkManagerGRPC.shared.session.group = widget.game.nGroup;
-        NetworkManagerGRPC.shared.session.user = username.text;
-      }
-
       await NetworkManagerGRPC.shared.start();
 
       if (NetworkManagerGRPC.shared.isClient) {

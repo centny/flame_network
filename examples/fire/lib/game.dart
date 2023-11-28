@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flame/collisions.dart';
@@ -99,12 +98,13 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   }
 
   Future<String> onPlayerJoin(NetworkSession ctx, String uuid, String name) async {
-    if ((ctx.user ?? "").isEmpty || name.isEmpty) {
-      return "user/name is required";
+    if (name.isEmpty) {
+      return "name is required";
     }
-    var owner = ctx.user ?? "";
+    var owner = name;
     if (players.containsKey(owner)) {
       ctx.group = nGroup;
+      ctx.user = name;
       return "OK";
     }
     var seat = requestSeat();
@@ -112,6 +112,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
       return "Seat Full";
     }
     ctx.group = nGroup;
+    ctx.user = name;
     var player = Player(group: nGroup, owner: owner, cid: const Uuid().v1())
       ..nName.value = name
       ..nSeat.value = seat;
@@ -119,6 +120,18 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     world.add(player);
     L.i("Game($nGroup) player $owner/$name join game on $nGroup");
     return "OK";
+  }
+
+  Future<String> join(String name) async {
+    if (isClient) {
+      var res = await networkCall(nJoin, name);
+      if (res == "OK") {
+        NetworkManager.global.session.user = name;
+        await NetworkManager.global.ready(); //read to sync
+      }
+      return res;
+    }
+    return "";
   }
 
   @override
@@ -167,17 +180,6 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
       default:
         throw Exception("onNetworkCreate $group.$key is not supported");
     }
-  }
-
-  Future<String> join(String name) async {
-    if (isClient) {
-      var res = await networkCall(nJoin, name);
-      if (res == "OK") {
-        await NetworkManager.global.ready(); //read to sync
-      }
-      return res;
-    }
-    return "";
   }
 
   @override
@@ -316,10 +318,10 @@ class NetworkPropColor extends NetworkProp<Color> {
   NetworkPropColor(super.name, super.defaultValue);
 
   @override
-  dynamic encode() => jsonEncode(value.value);
+  dynamic encode() => value.value;
 
   @override
-  void decode(v) => value = Color(jsonDecode(v));
+  void decode(v) => value = Color(v);
 }
 
 class Bullet extends CircleComponent with CollisionCallbacks, NetworkComponent {
