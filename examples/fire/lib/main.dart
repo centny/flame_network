@@ -31,7 +31,7 @@ void main() async {
     if (webAddr.isEmpty) {
       webAddr = "ws://0.0.0.0:50052/ws/fire";
     }
-    L.i("FireGame is starting by grpc:$grpcAddr,web:$webAddr");
+    L.i("FireGame is starting by mode:$mode,grpc:$grpcAddr,web:$webAddr");
     NetworkManagerGRPC.shared.grpcAddress = Uri.parse(grpcAddr);
     NetworkManagerGRPC.shared.webAddress = Uri.parse(webAddr);
     NetworkManagerGRPC.shared.webDir = "www";
@@ -47,10 +47,20 @@ void main() async {
     var loop = GameLoop(game.update);
     loop.start();
     await NetworkManagerGRPC.shared.start();
-    await ProcessSignal.sigint.watch().first;
-    L.i("server is stopping");
-    loop.stop();
-    await NetworkManagerGRPC.shared.stop();
+    runApp(
+      const AppMenu(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Text(
+                'Server is running',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
     return;
   }
   var grpcAddr = environment("GRPC_ADDR");
@@ -68,7 +78,7 @@ void main() async {
       }
     }
   }
-  L.i("FireGame is starting by grpc:$grpcAddr,web:$webAddr");
+  L.i("FireGame is starting by mode:$mode,grpc:$grpcAddr,web:$webAddr");
   NetworkManagerGRPC.shared.grpcAddress = Uri.parse(grpcAddr);
   NetworkManagerGRPC.shared.webAddress = Uri.parse(webAddr);
   NetworkManagerGRPC.shared.webDir = "www";

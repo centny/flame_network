@@ -1,19 +1,14 @@
 FROM flutter:3.16.1
 ADD . /src
 WORKDIR /src/examples/fire
-RUN /sdk/bin/flutter build bundle
+RUN /sdk/bin/flutter build linux
 RUN /sdk/bin/flutter build web
-RUN /sdk/bin/dart /sdk/bin/cache/dart-sdk/bin/snapshots/frontend_server.dart.snapshot \
-    --sdk-root /sdk/bin/cache/artifacts/engine/common/flutter_patched_sdk/ \
-    --target=flutter --enable-asserts \
-    --output-dill build/fire.dill \
-    lib/main.dart
 
 FROM ubuntu:22.04
-COPY --from=0 /sdk/bin/cache/artifacts/engine/linux-x64/ /app/
-COPY --from=0 /src/examples/fire/build/flutter_assets /app/assets
-COPY --from=0 /src/examples/fire/build/fire.dill /app/fire.dill
+RUN apt update && apt install -y libegl1 libgtk-3-0 xvfb && apt clean all
+COPY --from=0 /src/examples/fire/build/linux/x64/release/bundle/ /app/
 COPY --from=0 /src/examples/fire/build/web/ /app/www/
+COPY --from=0 /src/examples/fire/entrypoint.sh /app/entrypoint.sh
 WORKDIR /app
 ENV MODE=service
-ENTRYPOINT ["/app/flutter_tester","--disable-vm-service","--flutter-assets-dir=assets","fire.dill"]
+ENTRYPOINT ["/app/entrypoint.sh"]
