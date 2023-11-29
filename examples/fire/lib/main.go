@@ -54,7 +54,7 @@ func Main() {
 			delta := float64(now-timeStart) / 1000000000
 			timeStart = now
 			game.Update(delta)
-			network.Network.Sync(game.Group)
+			network.Network.Sync(game.Group, nil)
 		case <-exiter:
 			ticker.Stop()
 		}

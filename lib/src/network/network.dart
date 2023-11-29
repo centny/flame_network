@@ -87,7 +87,7 @@ mixin NetworkTransport {
   set standalone(bool v) => isServer = isClient = v;
   Future<void> ready();
   Future<void> pause();
-  Future<void> networkSync(NetworkSyncData data);
+  Future<void> networkSync(NetworkSyncData data, {List<NetworkConnection>? excluded});
   Future<NetworkCallResult> networkCall(NetworkCallArg arg);
 }
 
@@ -223,18 +223,22 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
     callback = this;
   }
 
-  Future<bool> sync(String group) async {
+  Future<bool> sync(String group, {NetworkConnection? whole}) async {
     var now = DateTime.now();
-    if (now.difference(_lastSync) < minSync) {
+    if (whole == null && now.difference(_lastSync) < minSync) {
       return false;
     }
     var updated = false;
     if (isServer) {
-      var data = NetworkSyncData.syncSend(group);
-      if (data.isUpdated) {
-        networkSync(data);
+      var updatedData = NetworkSyncData.syncSend(group);
+      if (updatedData.isUpdated) {
+        networkSync(updatedData, excluded: whole == null ? null : [whole]);
         updated = true;
         _lastSync = now;
+      }
+      if (whole != null) {
+        var wholeData = NetworkSyncData.syncSend(group, whole: true);
+        whole.networkSync(wholeData);
       }
     }
     return updated;
@@ -255,10 +259,7 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
   Future<void> onNetworkState(Set<NetworkConnection> all, NetworkConnection conn, NetworkState state, {Object? info}) async {
     var group = conn.session.group ?? "";
     if (isServer && conn.isServer && state == NetworkState.ready) {
-      var data = NetworkSyncData.syncSend(group, whole: true);
-      if (data.isUpdated) {
-        await conn.networkSync(data);
-      }
+      await sync(group, whole: conn);
     }
     await Future.forEach(matchNetworkEvent(group), (event) async {
       try {

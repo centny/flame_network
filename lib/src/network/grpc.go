@@ -342,8 +342,21 @@ func (n *NetworkServerGRPC) timeout(max time.Duration) {
 	}
 }
 
-func (n *NetworkServerGRPC) NetworkSync(data *NetworkSyncData) {
+func (n *NetworkServerGRPC) NetworkSync(data *NetworkSyncData, excluded []NetworkConnection) {
+	isExcluded := func(c NetworkConnection) bool {
+		exist := false
+		for _, e := range excluded {
+			if c == e {
+				exist = true
+				break
+			}
+		}
+		return exist
+	}
 	for _, c := range n.groupConnCopy(data.Group) {
+		if isExcluded(c) {
+			continue
+		}
 		sd := ParseSyncDataGRPC(data.Encode(c.session))
 		sd.Group = c.session.Group()
 		if Network.Verbose {
@@ -892,9 +905,9 @@ func (n *NetworkTransportGRPC) Pause() (err error) {
 	return
 }
 
-func (n *NetworkTransportGRPC) NetworkSync(data *NetworkSyncData) {
+func (n *NetworkTransportGRPC) NetworkSync(data *NetworkSyncData, excluded []NetworkConnection) {
 	if Network.IsServer {
-		n.Server.NetworkSync(data)
+		n.Server.NetworkSync(data, excluded)
 	}
 }
 

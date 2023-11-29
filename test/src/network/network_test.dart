@@ -250,7 +250,7 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
   }
 
   @override
-  Future<void> networkSync(NetworkSyncData data) {
+  Future<void> networkSync(NetworkSyncData data, {List<NetworkConnection>? excluded}) {
     data.components = data.components.map((e) => e.encode(conn.session)).toList();
     data.components = data.components.map((e) => e.decode()).toList();
     return super.onNetworkSync(conn, data);
@@ -294,10 +294,6 @@ void main() {
     var m = TestNetworkManager();
     var nc = TestNetworkComponent();
     await m.onNetworkState(HashSet.from([m.conn]), m.conn, NetworkState.ready);
-    try {
-      m.conn.syncError = true;
-      await m.onNetworkState(HashSet.from([m.conn]), m.conn, NetworkState.ready);
-    } catch (_) {}
     nc.unregister();
   });
   test('NetworkEvent.event', () async {
@@ -564,5 +560,9 @@ void main() {
     cb.onNetworkState(HashSet.from([conn]), conn, NetworkState.ready);
     await conn.close();
     assert(TestNetworkErr().nCreator == NetworkComponent.locCreator);
+    try {
+      conn.syncError = true;
+      await conn.networkSync(NetworkSyncData.create());
+    } catch (_) {}
   });
 }

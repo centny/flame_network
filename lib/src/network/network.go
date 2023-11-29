@@ -127,7 +127,7 @@ type NetworkTransport interface {
 	IsReady() (ready bool)
 	Ready() (err error)
 	Pause() (err error)
-	NetworkSync(data *NetworkSyncData)
+	NetworkSync(data *NetworkSyncData, excluded []NetworkConnection)
 	NetworkCall(arg *NetworkCallArg) (ret *NetworkCallResult, err error)
 }
 
@@ -286,24 +286,32 @@ func (n *NetworkManager) Pause() (err error) {
 	return
 }
 
-func (n *NetworkManager) Sync(group string) bool {
-	if time.Since(n.lastSync) < n.MinSync {
+func (n *NetworkManager) Sync(group string, whole NetworkConnection) bool {
+	if whole == nil && time.Since(n.lastSync) < n.MinSync {
 		return false
 	}
 	var updated = false
 	if n.IsServer {
-		var data = NewNetworkSyncDataBySyncSend(group, false)
-		if data.IsUpdated() {
-			n.NetworkSync(data)
+		var updatedData = NewNetworkSyncDataBySyncSend(group, false)
+		if updatedData.IsUpdated() {
+			if whole == nil {
+				n.NetworkSync(updatedData, []NetworkConnection{})
+			} else {
+				n.NetworkSync(updatedData, []NetworkConnection{whole})
+			}
 			updated = true
 			n.lastSync = time.Now()
+		}
+		if whole != nil {
+			wholeData := NewNetworkSyncDataBySyncSend(group, true)
+			whole.NetworkSync(wholeData)
 		}
 	}
 	return updated
 }
 
-func (n *NetworkManager) NetworkSync(data *NetworkSyncData) {
-	n.Transport.NetworkSync(data)
+func (n *NetworkManager) NetworkSync(data *NetworkSyncData, excluded []NetworkConnection) {
+	n.Transport.NetworkSync(data, excluded)
 }
 
 func (n *NetworkManager) NetworkCall(arg *NetworkCallArg) (ret *NetworkCallResult, err error) {
@@ -314,10 +322,7 @@ func (n *NetworkManager) NetworkCall(arg *NetworkCallArg) (ret *NetworkCallResul
 func (n *NetworkManager) OnNetworkState(all NetworkConnectionSet, conn NetworkConnection, state NetworkState, info interface{}) {
 	group := conn.Session().Group()
 	if n.IsServer && conn.IsServer() && state == NetworkStateReady {
-		data := NewNetworkSyncDataBySyncSend(group, true)
-		if data.IsUpdated() {
-			conn.NetworkSync(data)
-		}
+		n.Sync(group, conn)
 	}
 	EventHub.OnNetworkState(all, conn, state, info)
 }

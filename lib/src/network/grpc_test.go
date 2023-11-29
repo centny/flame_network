@@ -21,11 +21,38 @@ import (
 	ggrpc "google.golang.org/grpc"
 )
 
+type TestNetworkEvent struct {
+	conn   NetworkConnection
+	waiter chan int
+}
+
+func NewTestNetworkEvent() (event *TestNetworkEvent) {
+	event = &TestNetworkEvent{
+		waiter: make(chan int, 1),
+	}
+	EventHub.RegisterNetworkEvent("*", event)
+	return
+}
+
+func (t *TestNetworkEvent) OnNetworkState(all NetworkConnectionSet, conn NetworkConnection, state NetworkState, info interface{}) {
+	t.conn = conn
+	select {
+	case t.waiter <- 1:
+	default:
+	}
+}
+
+func (t *TestNetworkEvent) OnNetworkPing(conn NetworkConnection, ping time.Duration) {
+}
+
+func (t *TestNetworkEvent) OnNetworkDataSynced(conn NetworkConnection, data *NetworkSyncData) {
+}
+
 func TestGRPC(t *testing.T) {
 	SetLevel(zapcore.DebugLevel)
 	tester := xdebug.CaseTester{
 		0: 1,
-		2: 1,
+		1: 1,
 	}
 	newTestTransport := func() *NetworkTransportGRPC {
 		n := NewNetworkTransportGRPC()
@@ -33,6 +60,7 @@ func TestGRPC(t *testing.T) {
 		n.WebAddress, _ = url.Parse("ws://127.0.0.1:50061")
 		return n
 	}
+	var connEvent *TestNetworkEvent
 	resetNetwork := func() {
 		Network.Verbose = true
 		Network.IsServer = true
@@ -40,6 +68,7 @@ func TestGRPC(t *testing.T) {
 		Network.SetGroup("test")
 		Network.SetKey("test")
 		Network.Transport = newTestTransport()
+		connEvent = NewTestNetworkEvent()
 	}
 	if tester.Run() { //NetworkManager.sync
 		resetNetwork()
@@ -53,11 +82,20 @@ func TestGRPC(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		time.Sleep(500 * time.Millisecond)
+		<-connEvent.waiter
+		if connEvent.conn == nil {
+			t.Error("error")
+			return
+		}
 		nc := NewTestNetworkComponent()
 
 		//
-		Network.Sync("*")
+		time.Sleep(500 * time.Millisecond)
+		Network.Sync("*", nil)
+		time.Sleep(500 * time.Millisecond)
+		nc.SetValue("test", 1)
+		Network.Sync("*", connEvent.conn)
+		//
 
 		var ret0 string
 		if err := nc.NetworkCall("c0", nil, &ret0); err != nil || ret0 != "test" {
@@ -76,6 +114,26 @@ func TestGRPC(t *testing.T) {
 		Network.Pause()
 		Network.Stop()
 	}
+	if tester.Run() { //NetworkManager.close
+		resetNetwork()
+		err := Network.Start()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		err = Network.Ready()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		<-connEvent.waiter
+		if connEvent.conn == nil {
+			t.Error("error")
+			return
+		}
+		Network.Pause()
+		Network.Stop()
+	}
 	if tester.Run() { //NetworkManager.keep
 		resetNetwork()
 		Network.Keepalive = 100 * time.Millisecond
@@ -89,8 +147,10 @@ func TestGRPC(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		time.Sleep(200 * time.Millisecond)
 		transport := Network.Transport.(*NetworkTransportGRPC)
+		time.Sleep(200 * time.Millisecond)
+		transport.Server.timeout(10 * time.Millisecond)
+		time.Sleep(200 * time.Millisecond)
 		transport.Server.timeout(10 * time.Millisecond)
 
 		Network.Stop()
@@ -111,7 +171,7 @@ func TestGRPC(t *testing.T) {
 		}
 		nc := NewTestNetworkComponent()
 
-		Network.Sync("*")
+		Network.Sync("*", nil)
 
 		var ret0 string
 		if err := nc.NetworkCall("c0", nil, &ret0); err != nil || ret0 != "test" {

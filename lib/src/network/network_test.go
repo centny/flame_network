@@ -193,7 +193,7 @@ func (t *TestNetworkTransport) Ready() (err error) {
 func (t *TestNetworkTransport) Pause() (err error) {
 	return
 }
-func (t *TestNetworkTransport) NetworkSync(data *NetworkSyncData) {
+func (t *TestNetworkTransport) NetworkSync(data *NetworkSyncData, excluded []NetworkConnection) {
 	t.callback.OnNetworkSync(t.conn, data)
 }
 func (t *TestNetworkTransport) NetworkCall(arg *NetworkCallArg) (ret *NetworkCallResult, err error) {
@@ -204,12 +204,13 @@ func (t *TestNetworkTransport) NetworkCall(arg *NetworkCallArg) (ret *NetworkCal
 func TestNetwork(t *testing.T) {
 	tester := xdebug.CaseTester{
 		0: 1,
-		4: 1,
+		2: 1,
 	}
+	transport := &TestNetworkTransport{}
 	Network.IsServer = true
 	Network.IsClient = true
 	Network.SetGroup("test")
-	Network.Transport = &TestNetworkTransport{}
+	Network.Transport = transport
 	Network.Start()
 	ComponentHub.OnAdd = func(c *NetworkComponent) {}
 	ComponentHub.OnRemove = func(c *NetworkComponent) {}
@@ -226,8 +227,11 @@ func TestNetwork(t *testing.T) {
 	}
 	if tester.Run() { //NetworkManager.sync
 		nc := NewTestNetworkComponent()
-		Network.Sync("*")
-		Network.Sync("*")
+		Network.Sync("*", nil)
+		Network.Sync("*", nil)
+		time.Sleep(Network.MinSync * 2)
+		nc.SetValue("test", 1)
+		Network.Sync("*", transport.conn)
 		nc.Unregister()
 	}
 	if tester.Run() { //NetworkComponent.sync
@@ -472,5 +476,11 @@ func TestNetwork(t *testing.T) {
 
 		nc.SafeM = nil
 		nc.CallNetworkCall(nil, &NetworkCallArg{})
+
+		item := networkTriggerItem{
+			Cache: make(chan interface{}, 1),
+		}
+		item.Add(1)
+		item.Add(1)
 	}
 }

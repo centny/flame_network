@@ -213,15 +213,11 @@ class NetworkServerGRPC extends ServerServiceBase {
   }
 
   void _addStream(_NetworkSyncStream conn) {
+    _sessionConnAll(conn.session.key).add(conn);
+    _sessionConnGroup(conn.session.group ?? "").add(conn);
+    _sessionConnGroup("*").add(conn);
+    L.d("[GRPC] add one network sync stream on ${conn.session.group}/${conn.session.user}/${conn.session.key}");
     _networkState(conn, NetworkState.ready);
-    if (conn.state == NetworkState.ready) {
-      _sessionConnAll(conn.session.key).add(conn);
-      _sessionConnGroup(conn.session.group ?? "").add(conn);
-      _sessionConnGroup("*").add(conn);
-      L.d("[GRPC] add one network sync stream on ${conn.session.group}/${conn.session.user}/${conn.session.key}");
-    } else {
-      L.d("[GRPC] remove one network sync stream on ${conn.session.group}/${conn.session.user}/${conn.session.key}");
-    }
   }
 
   void _cancleStream(_NetworkSyncStream conn) {
@@ -238,12 +234,15 @@ class NetworkServerGRPC extends ServerServiceBase {
     }
   }
 
-  void networkSync(NetworkSyncData data) {
+  void networkSync(NetworkSyncData data, {List<NetworkConnection>? excluded}) {
     for (var conn in _sessionConnGroup(data.group)) {
+      if (excluded?.contains(conn) ?? false) {
+        continue;
+      }
       List<SyncDataComponent> components = [];
       for (var e in data.components) {
         var c = e.encode(conn);
-        if (c.nRemoved ?? false || (c.nProps?.isNotEmpty ?? false) || (c.nTriggers?.isNotEmpty ?? false)) {
+        if ((c.nRemoved ?? false) || (c.nProps?.isNotEmpty ?? false) || (c.nTriggers?.isNotEmpty ?? false)) {
           components.add(c.wrap());
         }
       }
@@ -294,7 +293,7 @@ class NetworkServerGRPC extends ServerServiceBase {
   Future<CallResult> remoteCall(ServiceCall call, CallArg request) async {
     var conn = _keepSessionByMeta(call.clientMetadata);
     if (NetworkManager.global.verbose) {
-      L.d("[GRPC] network call from ${conn.session.key} by ${request.toDebugString()}");
+      L.d("[GRPC] network call from ${conn.session.key} by \n${request.toDebugString()}");
     }
     var arg = request.wrap();
     try {
@@ -787,9 +786,9 @@ class NetworkManagerGRPC extends NetworkManager {
   }
 
   @override
-  Future<void> networkSync(NetworkSyncData data) async {
+  Future<void> networkSync(NetworkSyncData data, {List<NetworkConnection>? excluded}) async {
     if (isServer) {
-      service?.networkSync(data);
+      service?.networkSync(data, excluded: excluded);
     }
   }
 

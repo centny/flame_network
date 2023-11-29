@@ -470,6 +470,9 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
   final NetworkCall<void, NetworkVector2> nFire = NetworkCall("fire", argNew: NetworkVector2.zero);
   final NetworkCall<void, int> nSwitch = NetworkCall("switch");
 
+  @override
+  String toString() => "Player($nGroup/$nOwner/$nCID/${nSeat.value}/${nName.value})";
+
   Player({required this.group, required this.owner, required this.cid}) {
     registerNetworkProp(nName);
     registerNetworkProp(nSeat, setter: (v) => syncSeat(false));
@@ -486,7 +489,7 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
   void onNetworkRemove() => removeFromParent();
 
   void syncSeat(bool force) {
-    if (force || isMounted) {
+    if (force || isLoading || isLoaded) {
       seatView.paint.color = game.seatColors[nSeat.value];
       position = game.seatPosition[nSeat.value];
       angle = game.seatAngle[nSeat.value];
@@ -505,7 +508,7 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
     weaponView.position = seatView.position = Vector2(width / 2, height / 2);
     add(weaponView);
     add(seatView);
-    L.i("Game($nGroup) player(owner:$nOwner,$nCID) is loaded");
+    L.i("$this is loaded");
     if (isOwner) {
       current = this;
     }
@@ -520,7 +523,7 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
   }
 
   void _onReward(double v) {
-    L.i("Game($nGroup) reward $v");
+    L.i("$this reward $v");
   }
 
   Bullet _createBullet() {
@@ -554,18 +557,21 @@ class Player extends RectangleComponent with HasGameReference<FireGame>, Network
 
   Future<void> turnTo(Vector2 p) async {
     if (isOwner) {
+      L.i("$this turn to $p");
       await networkCall(nTurn, p.asNetwork());
     }
   }
 
   Future<void> fireTo(Vector2 p) async {
     if (isOwner) {
+      L.i("$this fire to $p");
       await networkCall(nFire, p.asNetwork());
     }
   }
 
   Future<void> switchWeapon() async {
     if (isOwner) {
+      L.i("$this switch weapon");
       await networkCall(nSwitch, 0);
     }
   }

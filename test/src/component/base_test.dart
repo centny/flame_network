@@ -12,7 +12,7 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
   }
 
   @override
-  Future<void> networkSync(NetworkSyncData data) {
+  Future<void> networkSync(NetworkSyncData data, {List<NetworkConnection>? excluded}) {
     throw Exception("abc");
   }
 

@@ -40,6 +40,7 @@ class TestNetworkCallback with NetworkCallback {
   final StreamController<String> _dataWaiter = StreamController<String>();
   late StreamIterator<String> connWaiter;
   late StreamIterator<String> dataWaiter;
+  NetworkConnection? serverConn;
   bool rejctConn = false;
   bool syncError = false;
 
@@ -70,6 +71,7 @@ class TestNetworkCallback with NetworkCallback {
     L.i("[Test] connection to $state,server:${conn.isServer},client:${conn.isClient},info:$info");
     if (conn.isServer) {
       _connWaiter.add("$state");
+      serverConn = conn;
     }
     if (conn.isServer && state == NetworkState.ready) {
       conn.session.group = "test";
@@ -143,10 +145,21 @@ void main() {
     await NetworkManagerGRPC.shared.ready();
     var connected = await callback.waitConn();
     L.i("conn is $connected");
+    assert(callback.serverConn != null, "not server conn");
+
+    //sync
+    await Future.delayed(const Duration(milliseconds: 50));
     nc.sInt.value = 1;
     NetworkManager.global.sync("*");
-    var received = await callback.waitData();
-    L.i("data is $received");
+    var received1 = await callback.waitData();
+    L.i("data is $received1");
+
+    await Future.delayed(const Duration(milliseconds: 50));
+    nc.sInt.value = 1;
+    NetworkManager.global.sync("*", whole: callback.serverConn!);
+    var received2 = await callback.waitData();
+    L.i("data is $received2");
+
     nc.unregister();
     await NetworkManagerGRPC.shared.pause();
     await NetworkManagerGRPC.shared.stop();
