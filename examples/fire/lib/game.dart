@@ -40,6 +40,8 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   final NetworkCall<String, String> nJoin = NetworkCall("join");
 
   bool autoZoom = true;
+  bool _reconnecting = false;
+  String? _enterName;
 
   final TextComponent _pingShow = TextComponent(text: "-");
   final TextBoxComponent _reconnectShow = TextBoxComponent(
@@ -48,6 +50,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     text: "connection loss, auto reconnecting...",
     size: Vector2(600, 20),
     textRenderer: TextPaint(style: const TextStyle(color: Colors.yellow, fontSize: 16)),
+    priority: 100,
   );
 
   FireGame({World? world, bool? autoZoom})
@@ -129,17 +132,30 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     return "OK";
   }
 
-  Future<String> join(String name) async {
-    if (isClient) {
-      var res = await networkCall(nJoin, name);
-      if (res == "OK") {
-        NetworkManager.global.session.group = nGroup;
-        NetworkManager.global.session.user = name;
-        await NetworkManager.global.ready(); //read to sync
-      }
-      return res;
+  Future<String> enter(String name) async {
+    assert(isClient);
+
+    var res = await networkCall(nJoin, name);
+    if (res == "OK") {
+      NetworkManager.global.session.group = nGroup;
+      NetworkManager.global.session.user = name;
+      _enterName = name;
+      await NetworkManager.global.ready(); //read to sync
+      L.i("$this player enter room");
     }
-    return "";
+
+    return res;
+  }
+
+  Future<void> leave() async {
+    assert(isClient);
+
+    //mark pause to sync
+    await NetworkManager.global.pause();
+
+    _enterName = null;
+
+    L.i("$this player leave room");
   }
 
   @override
@@ -164,6 +180,10 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     L.i("Game($nGroup) user $user connection is connect by $info");
     await super.onNetworkUserConnected(conn, user, info: info);
     if (isClient) {
+      if (_reconnecting && _enterName != null) {
+        await enter(_enterName!);
+      }
+      _reconnecting = false;
       camera.viewport.remove(_reconnectShow);
     }
   }
@@ -180,6 +200,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
       }
     }
     if (isClient) {
+      _reconnecting = true;
       camera.viewport.add(_reconnectShow);
     }
   }

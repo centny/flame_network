@@ -49,7 +49,7 @@ class LoginMenuState extends State<LoginMenu> {
       if (NetworkManagerGRPC.shared.isClient) {
         var name = username.text;
         L.i("Game(${widget.game.nGroup}) $name start join to game");
-        var res = await widget.game.join(username.text);
+        var res = await widget.game.enter(username.text);
         if (res != "OK") {
           L.w("Game(${widget.game.nGroup}) $name join to game fail with $res");
           setState(() {
