@@ -44,11 +44,10 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
   String? _enterName;
 
   final TextComponent _pingShow = TextComponent(text: "-");
-  final TextBoxComponent _reconnectShow = TextBoxComponent(
+  final TextComponent _reconnectShow = TextComponent(
     anchor: Anchor.center,
-    align: Anchor.center,
-    text: "connection loss, auto reconnecting...",
-    size: Vector2(600, 20),
+    text: "reconnecting...",
+    size: Vector2(200, 20),
     textRenderer: TextPaint(style: const TextStyle(color: Colors.yellow, fontSize: 16)),
     priority: 100,
   );
@@ -184,7 +183,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
         await enter(_enterName!);
       }
       _reconnecting = false;
-      camera.viewport.remove(_reconnectShow);
+      _reconnectShow.removeFromParent();
     }
   }
 
@@ -201,6 +200,7 @@ class FireGame extends FlameGame with PanDetector, TapCallbacks, KeyboardEvents,
     }
     if (isClient) {
       _reconnecting = true;
+      _reconnectShow.removeFromParent();
       camera.viewport.add(_reconnectShow);
     }
   }
