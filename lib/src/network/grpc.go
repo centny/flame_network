@@ -330,6 +330,13 @@ func (n *NetworkServerGRPC) cancleStream(stream *NetworkSyncStreamGRPC) {
 	Debugf("[GRPC] remove network sync stream on %v/%v/%v", group, stream.session.User(), session)
 }
 
+func (n *NetworkServerGRPC) countStream(session NetworkSession) (c int) {
+	n.lock.Lock()
+	defer n.lock.Unlock()
+	c = len(n.sessionConnAll(session.Key()))
+	return
+}
+
 func (n *NetworkServerGRPC) networkState(conn NetworkConnection, state NetworkState, info interface{}) {
 	n.callback.OnNetworkState(n.sessionConnCopy(conn.Session().Key()), conn, state, info)
 }
@@ -407,10 +414,12 @@ func (n *NetworkServerGRPC) RemoteCall(ctx context.Context, arg *grpc.CallArg) (
 func (n *NetworkServerGRPC) RemotePing(ctx context.Context, arg *grpc.PingArg) (result *grpc.PingResult, err error) {
 	session := NewNetworkSessionFromGRPC(ctx)
 	conn := n.keepSession(session)
+	connected := n.countStream(session)
 	n.callback.OnNetworkPing(conn, 0)
 	result = &grpc.PingResult{
 		Id:         arg.Id,
 		ServerTime: xtime.Now(),
+		Connected:  int32(connected),
 	}
 	return
 }

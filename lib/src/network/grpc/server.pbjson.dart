@@ -43,13 +43,14 @@ const PingResult$json = {
   '2': [
     {'1': 'id', '3': 1, '4': 1, '5': 11, '6': '.grpc.RequestID', '10': 'id'},
     {'1': 'serverTime', '3': 2, '4': 1, '5': 3, '10': 'serverTime'},
+    {'1': 'connected', '3': 3, '4': 1, '5': 5, '10': 'connected'},
   ],
 };
 
 /// Descriptor for `PingResult`. Decode as a `google.protobuf.DescriptorProto`.
 final $typed_data.Uint8List pingResultDescriptor = $convert.base64Decode(
     'CgpQaW5nUmVzdWx0Eh8KAmlkGAEgASgLMg8uZ3JwYy5SZXF1ZXN0SURSAmlkEh4KCnNlcnZlcl'
-    'RpbWUYAiABKANSCnNlcnZlclRpbWU=');
+    'RpbWUYAiABKANSCnNlcnZlclRpbWUSHAoJY29ubmVjdGVkGAMgASgFUgljb25uZWN0ZWQ=');
 
 @$core.Deprecated('Use syncDataComponentDescriptor instead')
 const SyncDataComponent$json = {

@@ -228,6 +228,10 @@ class NetworkServerGRPC extends ServerServiceBase {
     _networkState(conn, NetworkState.closed);
   }
 
+  int _countStream(NetworkSession session) {
+    return _sessionConnAll(session.key).length;
+  }
+
   Future<void> close() async {
     for (var conn in _sessionConnGroup("*").toSet()) {
       await conn.close();
@@ -276,8 +280,9 @@ class NetworkServerGRPC extends ServerServiceBase {
 
   @override
   Future<PingResult> remotePing(ServiceCall call, PingArg request) async {
-    _keepSessionByMeta(call.clientMetadata);
-    return PingResult(id: request.id, serverTime: Int64(DateTime.now().millisecondsSinceEpoch));
+    var conn = _keepSessionByMeta(call.clientMetadata);
+    var connected = _countStream(conn.session);
+    return PingResult(id: request.id, serverTime: Int64(DateTime.now().millisecondsSinceEpoch), connected: connected);
   }
 
   @override
@@ -360,9 +365,9 @@ class NetworkClientGRPC extends ServerClient with NetworkConnection {
     }
   }
 
-  Future<DateTime> ping(Duration timeout) async {
+  Future<int> ping(Duration timeout) async {
     var result = await super.remotePing(PingArg(id: newRequestID()), options: CallOptions(metadata: session.meta, timeout: timeout));
-    return DateTime.fromMillisecondsSinceEpoch(result.serverTime.toInt());
+    return result.connected;
   }
 
   Future<void> _onNetworkSync(NetworkConnection conn, SyncData raw) async {
@@ -601,6 +606,7 @@ class NetworkManagerGRPC extends NetworkManager {
   //
   DateTime _pingShow = DateTime.fromMillisecondsSinceEpoch(0);
   int _pingCount = 0;
+  int _pingConnected = 0;
   Duration _pingSpeed = const Duration();
   @override
   Duration get pingSpeed => _pingSpeed;
@@ -665,11 +671,13 @@ class NetworkManagerGRPC extends NetworkManager {
     }
     client = NetworkClientGRPC(channel!, callback);
     if (isReady) {
+      _pingConnected = 1;
       client?.startMonitorSync();
     }
   }
 
   Future<void> _ticker() async {
+    L.i("[GRPC] ticker is starting");
     timer = Timer.periodic(const Duration(seconds: 3), (t) => onTicker());
   }
 
@@ -694,7 +702,11 @@ class NetworkManagerGRPC extends NetworkManager {
     var pingOld = _pingSpeed;
     try {
       DateTime startTime = DateTime.now();
-      await client!.ping(keepalive);
+      var connected = await client!.ping(keepalive);
+      if (_pingConnected < 1 && connected < 1 && isReady) {
+        throw Exception("not connected");
+      }
+      _pingConnected = connected;
       _pingSpeed = DateTime.now().difference(startTime);
       _pingCount++;
 
@@ -709,22 +721,23 @@ class NetworkManagerGRPC extends NetworkManager {
       if (_pingSpeed != pingOld) {
         onNetworkPing(client!, _pingSpeed);
       }
+      _keeping = false;
     } catch (e) {
-      _pingSpeed = const Duration(milliseconds: -1);
-      if (_pingSpeed != pingOld) {
-        onNetworkPing(client!, _pingSpeed);
-      }
-
       L.w("[GRPC] ping to $channel throw error with $e");
       try {
+        _pingSpeed = const Duration(milliseconds: -1);
+        if (_pingSpeed != pingOld) {
+          onNetworkPing(client!, _pingSpeed);
+        }
+      } catch (_) {}
+      try {
         await client?.stopMonitorSync();
-        await channel?.shutdown();
       } catch (_) {}
       try {
         await reconnect();
       } catch (_) {}
+      _keeping = false;
     }
-    _keeping = false;
   }
 
   Future<void> start() async {
@@ -781,7 +794,7 @@ class NetworkManagerGRPC extends NetworkManager {
     }
   }
 
-  Future<DateTime> ping(Duration timeout) async {
+  Future<int> ping(Duration timeout) async {
     return client!.ping(timeout);
   }
 

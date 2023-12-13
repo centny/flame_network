@@ -9,6 +9,7 @@ message PingArg { RequestID id = 1; }
 message PingResult {
   RequestID id = 1;
   int64 serverTime = 2;
+  int32 connected = 3;
 }
 
 message SyncDataComponent {

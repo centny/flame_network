@@ -49,7 +49,7 @@ class Filter extends LogFilter {
 }
 
 var L = Logger(
-  filter: null, // Use the default LogFilter (-> only log in debug mode)
+  filter: Filter(), // Use the default LogFilter (-> only log in debug mode)
   printer: LinePrinter(), // Use the PrettyPrinter to format and print log
-  output: null, // Use the default LogOutput (-> send everything to console)
+  output: ConsoleOutput(), // Use the default LogOutput (-> send everything to console)
 );

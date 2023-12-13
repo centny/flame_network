@@ -120,6 +120,7 @@ class PingResult extends $pb.GeneratedMessage {
   factory PingResult({
     RequestID? id,
     $fixnum.Int64? serverTime,
+    $core.int? connected,
   }) {
     final $result = create();
     if (id != null) {
@@ -127,6 +128,9 @@ class PingResult extends $pb.GeneratedMessage {
     }
     if (serverTime != null) {
       $result.serverTime = serverTime;
+    }
+    if (connected != null) {
+      $result.connected = connected;
     }
     return $result;
   }
@@ -137,6 +141,7 @@ class PingResult extends $pb.GeneratedMessage {
   static final $pb.BuilderInfo _i = $pb.BuilderInfo(_omitMessageNames ? '' : 'PingResult', package: const $pb.PackageName(_omitMessageNames ? '' : 'grpc'), createEmptyInstance: create)
     ..aOM<RequestID>(1, _omitFieldNames ? '' : 'id', subBuilder: RequestID.create)
     ..aInt64(2, _omitFieldNames ? '' : 'serverTime', protoName: 'serverTime')
+    ..a<$core.int>(3, _omitFieldNames ? '' : 'connected', $pb.PbFieldType.O3)
     ..hasRequiredFields = false
   ;
 
@@ -180,6 +185,15 @@ class PingResult extends $pb.GeneratedMessage {
   $core.bool hasServerTime() => $_has(1);
   @$pb.TagNumber(2)
   void clearServerTime() => clearField(2);
+
+  @$pb.TagNumber(3)
+  $core.int get connected => $_getIZ(2);
+  @$pb.TagNumber(3)
+  set connected($core.int v) { $_setSignedInt32(2, v); }
+  @$pb.TagNumber(3)
+  $core.bool hasConnected() => $_has(2);
+  @$pb.TagNumber(3)
+  void clearConnected() => clearField(3);
 }
 
 class SyncDataComponent extends $pb.GeneratedMessage {

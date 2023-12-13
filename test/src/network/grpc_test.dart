@@ -293,6 +293,7 @@ void main() {
     await NetworkManagerGRPC.shared.ready();
     var ready = await callback.waitConn();
     L.i("conn is $ready");
+    await NetworkManagerGRPC.shared.onTicker();
     NetworkManagerGRPC.shared.client = null;
     NetworkManagerGRPC.shared.channel = null;
     await NetworkManagerGRPC.shared.onTicker();
