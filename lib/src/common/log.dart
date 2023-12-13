@@ -43,6 +43,11 @@ class LinePrinter extends PrettyPrinter {
   }
 }
 
+class Filter extends LogFilter {
+  @override
+  bool shouldLog(LogEvent event) => event.level.value >= level!.value;
+}
+
 var L = Logger(
   filter: null, // Use the default LogFilter (-> only log in debug mode)
   printer: LinePrinter(), // Use the PrettyPrinter to format and print log
