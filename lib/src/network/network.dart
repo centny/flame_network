@@ -85,8 +85,10 @@ mixin NetworkTransport {
   bool isReady = false;
   bool get standalone => isServer && isClient;
   set standalone(bool v) => isServer = isClient = v;
+  Future<void> start();
   Future<void> ready();
   Future<void> pause();
+  Future<void> stop();
   Future<void> networkSync(NetworkSyncData data, {List<NetworkConnection>? excluded});
   Future<NetworkCallResult> networkCall(NetworkCallArg arg);
 }
@@ -222,6 +224,14 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
     _global = this;
     callback = this;
   }
+
+  @override
+  @mustCallSuper
+  Future<void> start() async {}
+
+  @override
+  @mustCallSuper
+  Future<void> stop() async => NetworkComponent.clear();
 
   Future<bool> sync(String group, {NetworkConnection? whole}) async {
     var now = DateTime.now();
@@ -543,12 +553,29 @@ mixin NetworkComponent {
 
   //--------------------------//
   //------ NetworkComponent -------//
+  static void clear() {
+    for (var e in _componentAll.values) {
+      e.onNetworkRemove();
+    }
+    _factoryAll.clear();
+    _componentAll.clear();
+    _componentGroup.clear();
+  }
+
+  //--------------------------//
+  //------ NetworkComponent -------//
 
   static void registerFactory({String? key, String? group, required NetworkComponentFactory creator}) {
     if (group != null) {
+      if (_factoryAll.containsKey("$group-*")) {
+        throw Exception("NetworkComponentFactory by $group-* is registered");
+      }
       _factoryAll["$group-*"] = creator;
     }
     if (key != null) {
+      if (_factoryAll.containsKey(key)) {
+        throw Exception("NetworkComponentFactory by $key is registered");
+      }
       _factoryAll[key] = creator;
     }
   }
@@ -588,6 +615,9 @@ mixin NetworkComponent {
 
   static void _addComponent(NetworkComponent c) {
     if (_componentAll.containsKey(c.nCID)) {
+      if (_componentAll[c.nCID] != c) {
+        throw Exception("NetworkComponent by ${c.nCID}/$c is registered");
+      }
       return;
     }
     _componentAll[c.nCID] = c;

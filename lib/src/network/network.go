@@ -268,6 +268,7 @@ func (n *NetworkManager) Start() (err error) {
 
 func (n *NetworkManager) Stop() (err error) {
 	err = n.Transport.Stop()
+	ComponentHub.Clear()
 	return
 }
 
@@ -894,6 +895,22 @@ func NewNetworkComponentHub() (hub *NetworkComponentHub) {
 	return
 }
 
+func (n *NetworkComponentHub) Clear() {
+	n.factoryLck.Lock()
+	n.factoryAll = map[string]NetworkComponentFactory{}
+	n.factoryLck.Unlock()
+
+	componentAll := []*NetworkComponent{}
+	n.componentLck.Lock()
+	for _, c := range n.componentAll {
+		componentAll = append(componentAll, c)
+	}
+	n.componentLck.Unlock()
+	for _, component := range componentAll {
+		n.removeComponent(component)
+	}
+}
+
 func (n *NetworkComponentHub) addComponent(c *NetworkComponent) {
 	added := false
 	n.componentLck.Lock()
@@ -903,7 +920,10 @@ func (n *NetworkComponentHub) addComponent(c *NetworkComponent) {
 			n.OnAdd(c)
 		}
 	}()
-	if n.componentAll[c.CID] != nil {
+	if component, ok := n.componentAll[c.CID]; ok {
+		if component != c {
+			panic(fmt.Sprintf("NetworkComponent by %v/%v is registered", c.CID, c))
+		}
 		return
 	}
 	{
@@ -969,9 +989,15 @@ func (n *NetworkComponentHub) RegisterFactory(key, group string, creator Network
 	n.factoryLck.Lock()
 	defer n.factoryLck.Unlock()
 	if len(group) > 0 {
+		if _, ok := n.factoryAll[group+"-*"]; ok {
+			panic(fmt.Sprintf("NetworkComponentFactory by %v is registered", group+"-*"))
+		}
 		n.factoryAll[group+"-*"] = creator
 	}
 	if len(key) > 0 {
+		if _, ok := n.factoryAll[key]; ok {
+			panic(fmt.Sprintf("NetworkComponentFactory by %v is registered", key))
+		}
 		n.factoryAll[key] = creator
 	}
 }

@@ -234,6 +234,23 @@ func TestNetwork(t *testing.T) {
 		Network.Sync("*", transport.conn)
 		nc.Unregister()
 	}
+	if tester.Run() { //NetworkComponent.new
+		nc := NewTestNetworkComponent()
+		func() {
+			defer func() {
+				if perr := recover(); perr == nil {
+					t.Error(perr)
+				}
+			}()
+			NewTestNetworkComponent()
+		}()
+		nc.Unregister()
+	}
+	if tester.Run() { //ComponentHub.Clear
+		nc := NewTestNetworkComponent()
+		ComponentHub.Clear()
+		nc.Unregister()
+	}
 	if tester.Run() { //NetworkComponent.sync
 		nc := NewTestNetworkComponent()
 
@@ -400,7 +417,29 @@ func TestNetwork(t *testing.T) {
 		})
 		ComponentHub.CreateComponent("error-0", "", "", "1111")
 
+		func() {
+			defer func() {
+				if perr := recover(); perr == nil {
+					t.Error(perr)
+				}
+			}()
+			ComponentHub.RegisterFactory("", "xxx", func(key, group, owner, cid string) (*NetworkComponent, error) {
+				return nil, nil
+			})
+		}()
+		func() {
+			defer func() {
+				if perr := recover(); perr == nil {
+					t.Error(perr)
+				}
+			}()
+			ComponentHub.RegisterFactory("*", "", func(key, group, owner, cid string) (*NetworkComponent, error) {
+				return nil, nil
+			})
+		}()
+
 		ComponentHub.UnregisterFactory("*", "xxx")
+		ComponentHub.UnregisterFactory("error-0", "")
 	}
 	if tester.Run() { //NetworkComponent.call
 		nc := NewTestNetworkComponent()

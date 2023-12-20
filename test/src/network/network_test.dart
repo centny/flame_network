@@ -289,6 +289,7 @@ void main() {
     var nc = TestNetworkComponent();
     assert(nc.isServer);
     assert(nc.isClient);
+    nc.unregister();
   });
   test('NetworkManager.state', () async {
     var m = TestNetworkManager();
@@ -429,6 +430,10 @@ void main() {
     NetworkComponent.onComponentRemove = (p0) => L.i("remove ->${p0.nCID}");
     var nc = TestNetworkComponent();
     assert(NetworkComponent.findComponent(nc.nCID) != null);
+    try {
+      TestNetworkComponent();
+      assert(false);
+    } catch (_) {}
     nc.unregister();
     assert(NetworkComponent.findComponent(nc.nCID) == null);
   });
@@ -540,6 +545,14 @@ void main() {
 
     try {
       NetworkComponent.createComponent("none", "*", "", "123456");
+      assert(false);
+    } catch (_) {}
+    try {
+      NetworkComponent.registerFactory(key: "test", creator: (key, group, owner, id) => TestNetworkComponent());
+      assert(false);
+    } catch (_) {}
+    try {
+      NetworkComponent.registerFactory(group: "abc", creator: (key, group, owner, id) => TestNetworkComponent());
       assert(false);
     } catch (_) {}
     NetworkComponent.unregisterFactory(key: "test");

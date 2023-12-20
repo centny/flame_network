@@ -740,7 +740,9 @@ class NetworkManagerGRPC extends NetworkManager {
     }
   }
 
+  @override
   Future<void> start() async {
+    await super.start();
     if (running) {
       return;
     }
@@ -758,6 +760,7 @@ class NetworkManagerGRPC extends NetworkManager {
     }
   }
 
+  @override
   Future<void> stop() async {
     running = false;
     isReady = false;
@@ -776,6 +779,7 @@ class NetworkManagerGRPC extends NetworkManager {
       channel = null;
       client = null;
     }
+    await super.stop();
   }
 
   @override
