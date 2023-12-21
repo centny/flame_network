@@ -10,6 +10,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: subosito/flutter-action@v2
-    - run: flutter test
+    - run: flutter test --coverage
     - uses: GoogleCloudPlatform/lcov-coverage-badgev@v1.0.0
       file: ./coverage/lcov.info
