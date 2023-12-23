@@ -17,10 +17,16 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
   }
 
   @override
-  Future<void> ready() async => isReady = true;
+  Future<void> ready() async {
+    await super.ready();
+    isReady = true;
+  }
 
   @override
-  Future<void> pause() async => isReady = false;
+  Future<void> pause() async {
+    await super.pause();
+    isReady = false;
+  }
 }
 
 class TestValue with NetworkValue {

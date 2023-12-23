@@ -257,10 +257,16 @@ class TestNetworkManager extends NetworkManager with NetworkCallback {
   }
 
   @override
-  Future<void> ready() async => isReady = true;
+  Future<void> ready() async {
+    await super.ready();
+    isReady = true;
+  }
 
   @override
-  Future<void> pause() async => isReady = false;
+  Future<void> pause() async {
+    await super.pause();
+    isReady = false;
+  }
 }
 
 void main() {
@@ -295,6 +301,15 @@ void main() {
     var m = TestNetworkManager();
     var nc = TestNetworkComponent();
     await m.onNetworkState(HashSet.from([m.conn]), m.conn, NetworkState.ready);
+    nc.unregister();
+  });
+  test('NetworkManager.ready', () async {
+    var m = TestNetworkManager();
+    var nc = TestNetworkComponent();
+    assert(!nc.removed);
+    m.session.group = "ready";
+    await m.ready();
+    assert(nc.removed);
     nc.unregister();
   });
   test('NetworkEvent.event', () async {

@@ -231,6 +231,18 @@ abstract class NetworkManager with NetworkTransport, NetworkCallback {
 
   @override
   @mustCallSuper
+  Future<void> ready() async {
+    if (isClient && (session.group?.isNotEmpty ?? false)) {
+      NetworkComponent.clear(notGroup: session.group);
+    }
+  }
+
+  @override
+  @mustCallSuper
+  Future<void> pause() async {}
+
+  @override
+  @mustCallSuper
   Future<void> stop() async => NetworkComponent.clear();
 
   Future<bool> sync(String group, {NetworkConnection? whole}) async {
@@ -553,17 +565,13 @@ mixin NetworkComponent {
 
   //--------------------------//
   //------ NetworkComponent -------//
-  static void clear() {
-    for (var e in _componentAll.values) {
-      e.onNetworkRemove();
+  static void clear({String? notGroup}) {
+    _factoryAll.removeWhere((k, value) => notGroup == null || (k.endsWith("-*") && k != "$notGroup-*"));
+    var componentRemove = _componentAll.values.takeWhile((e) => notGroup == null || e.nGroup != notGroup).toList();
+    for (var c in componentRemove) {
+      _removeComponent(c);
     }
-    _factoryAll.clear();
-    _componentAll.clear();
-    _componentGroup.clear();
   }
-
-  //--------------------------//
-  //------ NetworkComponent -------//
 
   static void registerFactory({String? key, String? group, required NetworkComponentFactory creator}) {
     if (group != null) {

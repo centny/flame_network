@@ -784,6 +784,7 @@ class NetworkManagerGRPC extends NetworkManager {
 
   @override
   Future<void> ready() async {
+    await super.ready();
     isReady = true;
     if (isClient) {
       client?.startMonitorSync();
@@ -792,6 +793,7 @@ class NetworkManagerGRPC extends NetworkManager {
 
   @override
   Future<void> pause() async {
+    await super.pause();
     isReady = false;
     if (isClient) {
       client?.stopMonitorSync();

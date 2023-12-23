@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -268,7 +269,7 @@ func (n *NetworkManager) Start() (err error) {
 
 func (n *NetworkManager) Stop() (err error) {
 	err = n.Transport.Stop()
-	ComponentHub.Clear()
+	ComponentHub.Clear("")
 	return
 }
 
@@ -278,6 +279,9 @@ func (n *NetworkManager) IsReady() (ready bool) {
 }
 
 func (n *NetworkManager) Ready() (err error) {
+	if group := n.Group(); len(group) > 0 {
+		ComponentHub.Clear(n.Group())
+	}
 	err = n.Transport.Ready()
 	return
 }
@@ -895,15 +899,21 @@ func NewNetworkComponentHub() (hub *NetworkComponentHub) {
 	return
 }
 
-func (n *NetworkComponentHub) Clear() {
+func (n *NetworkComponentHub) Clear(notGroup string) {
 	n.factoryLck.Lock()
-	n.factoryAll = map[string]NetworkComponentFactory{}
+	for k := range n.factoryAll {
+		if len(notGroup) < 1 || (strings.HasSuffix(k, "-*") && k != notGroup+"-*") {
+			delete(n.factoryAll, k)
+		}
+	}
 	n.factoryLck.Unlock()
 
 	componentAll := []*NetworkComponent{}
 	n.componentLck.Lock()
 	for _, c := range n.componentAll {
-		componentAll = append(componentAll, c)
+		if len(notGroup) < 1 || c.Group != notGroup {
+			componentAll = append(componentAll, c)
+		}
 	}
 	n.componentLck.Unlock()
 	for _, component := range componentAll {

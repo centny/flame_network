@@ -247,8 +247,9 @@ func TestNetwork(t *testing.T) {
 		nc.Unregister()
 	}
 	if tester.Run() { //ComponentHub.Clear
+		ComponentHub.RegisterFactory("", "none", func(key, group, owner, cid string) (c *NetworkComponent, err error) { return nil, nil })
 		nc := NewTestNetworkComponent()
-		ComponentHub.Clear()
+		ComponentHub.Clear("")
 		nc.Unregister()
 	}
 	if tester.Run() { //NetworkComponent.sync
