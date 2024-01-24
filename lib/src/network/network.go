@@ -577,10 +577,14 @@ func (n *NetworkComponent) addSelfToHub() {
 	ComponentHub.addComponent(n)
 }
 
-func (n *NetworkComponent) removeSelfFromHub() {
-	if n.propAll.Length() < 1 && len(n.callAll) < 1 {
-		ComponentHub.removeComponent(n)
+func (n *NetworkComponent) shouldRemoveSelfFromHub() (call func()) {
+	remove := n.propAll.Length() < 1 && len(n.callAll) < 1
+	call = func() {
+		if remove {
+			ComponentHub.removeComponent(n)
+		}
 	}
+	return
 }
 
 //------ NetworkProp -------//
@@ -592,9 +596,14 @@ func (n *NetworkComponent) RegisterNetworkProp() {
 }
 
 func (n *NetworkComponent) UnregisterNetworkProp() {
-	n.RLock()
-	defer n.RUnlock()
-	n.removeSelfFromHub()
+	var call func()
+	n.Lock()
+	defer func() {
+		n.Unlock()
+		call()
+	}()
+	n.propAll.Clear()
+	call = n.shouldRemoveSelfFromHub()
 }
 
 func (n *NetworkComponent) onPropUpdate(key string, val interface{}) {
@@ -650,22 +659,25 @@ func (n *NetworkComponent) RegisterNetworkTrigger(name string, trigger NetworkTr
 }
 
 func (n *NetworkComponent) UnregisterNetworkTrigger(name string) {
+	var call func()
 	n.Lock()
 	defer func() {
 		n.Unlock()
-		n.removeSelfFromHub()
+		call()
 	}()
 	delete(n.triggerAll, name)
-
+	call = n.shouldRemoveSelfFromHub()
 }
 
 func (n *NetworkComponent) ClearNetworkTrigger() {
+	var call func()
 	n.Lock()
 	defer func() {
 		n.Unlock()
-		n.removeSelfFromHub()
+		call()
 	}()
 	n.triggerAll = map[string]*networkTriggerItem{}
+	call = n.shouldRemoveSelfFromHub()
 }
 
 func (n *NetworkComponent) findNetworkTrigger(name string) *networkTriggerItem {
@@ -737,22 +749,25 @@ func (n *NetworkComponent) RegisterNetworkCall(name string, call NetworkCall) (e
 }
 
 func (n *NetworkComponent) UnregisterNetworkCall(name string) {
+	var call func()
 	n.Lock()
 	defer func() {
 		n.Unlock()
-		n.removeSelfFromHub()
+		call()
 	}()
 	delete(n.callAll, name)
-
+	call = n.shouldRemoveSelfFromHub()
 }
 
 func (n *NetworkComponent) ClearNetworkCall() {
+	var call func()
 	n.Lock()
 	defer func() {
 		n.Unlock()
-		n.removeSelfFromHub()
+		call()
 	}()
 	n.callAll = map[string]NetworkCall{}
+	call = n.shouldRemoveSelfFromHub()
 }
 
 func (n *NetworkComponent) findNetworkCall(name string) NetworkCall {
